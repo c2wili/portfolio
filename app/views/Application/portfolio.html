@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <title>test</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta charset="utf-8">
+
+	#{script 'jquery-3.1.0.min.js' /}
+	#{script 'jquery.number.min.js' /}
+	#{script 'jquery.dataTables.min.js' /}
+	#{script 'DataTables-1.10.12/media/js/jquery.dataTables.min.js' /}
+	#{script 'bootstrap-4.0.0/js/bootstrap.min.js' /} 
+	#{script 'bootstrap-datepicker.min.js' /}
+	#{script 'highcharts-6.0.7.js' /}
+	#{script 'moment-2.15.1.min.js' /}
+	
+	#{script 'd3.v3.js' /}
+	#{script 'sankey.js' /}
+
+	
+	<link rel="stylesheet" type="text/css" href="/public/javascripts/bootstrap-4.0.0/css/bootstrap.min.css" ></link>
+	#{stylesheet 'jquery.dataTables.css' /}
+	#{stylesheet 'bootstrap-datepicker.min.css' /}
+	#{stylesheet 'font-awesome-4.6.3/css/font-awesome.css' /}
+	
+	
+    <style>
+	th { font-size: 13px; }
+    .dataTables_wrapper { font-size: 13px; }
+    .ico-hist{float:right; cursor:pointer; color: #a8a8a8; font-size: 1.5em; padding-top:5px;}
+    .ico-trash{float:right; cursor:pointer; color: #a8a8a8; font-size: 1.5em;}
+    .modal-title{white-space: nowrap;}
+    .modal-lg-cust { max-width: 1325px; }
+    table.dataTable th.dt-qtr, table.dataTable td.dt-qtr{background-color:#efefef;}
+    </style>
+
+
+</head>
+
+<body>
+
+    <script>
+
+    
+	    $( document ).ready(function() {
+	    	
+/*
+			$.getJSON( "rest?hnd=quotes", function( data ) {
+			    // Log each key in the response data
+			    $.each( data, function( key, value ) {
+			        console.log(   value );
+			    });
+			});    
+*/	    	
+			
+			
+		 	 var overviewtable = $('#overview').DataTable( {
+		        "ajax":{
+		        	url: "rest"
+		        	,data: function(d){
+		                d.hnd = 'overview';
+		        		d.zeroshares = $("#zerosharechk").prop('checked');
+		        	}
+		        	,dataSrc: ""
+		        }
+		 	    ,serveSide: true
+		     	,searching: false
+			    ,info:false
+				,lengthChange:false
+			    ,paginate:false
+			    ,scroller: true
+			    ,scrollY: 500
+		        ,columns: [
+		            { data: "name", width: "300px" ,render: function ( data, type, row ) { var broker = (row.brokerage == "ETRADE") ? " (eTrade)": ""; return data + broker + "<i class='fa fa-list fa-lg ico-hist' aria-hidden='true'></i>" }},
+		            { data: "ticker" },		            
+		            { data: "brokerage", visible:false },
+		            { data: "shares" , className: "dt-right",render: function ( data, type, row ) { return $.number(data,4); } },
+		            { data: "avg_cost", className: "dt-right", render: function ( data, type, row ) { return '$' +$.number(data,2); } },
+		            { data: "price" , className: "dt-right",render: function ( data, type, row ) { return '$' +$.number(data,2); } },
+		            { data: "val" , className: "dt-right",render: function ( data, type, row ) { return '$' +$.number(data,2); } },
+		            { data: "gainloss" , className: "dt-right",render: function ( data, type, row ) { if(data<0){return '<span style="color:red">($' +$.number(data*-1,2) + ')</span>'; }else {return '<span style="color:green">$' +$.number(data,2) + '</span>';} } },
+		            { data: "div_ytd" , className: "dt-right", render: function ( data, type, row ) { return '$' +$.number(data,2); } },
+		            { data: "div_all" , className: "dt-right", render: function ( data, type, row ) { return '$' +$.number(data,2); } },
+		        	{ "targets": 7, "width":"140px", "orderable":false, "data":null, 
+		        		render: function ( data, type, row ) { 
+		        	   		var buy = "<button type='button' class='btn btn-sm btn-outline-secondary '>buy</button>&nbsp;";
+		        	   		var sell = "<button type='button' class='btn btn-sm btn-outline-secondary '>sell</button>&nbsp;";
+		        	   		var div = "<button type='button' class='btn btn-sm btn-outline-secondary '>dividend</button>&nbsp;";
+		        	   		if(row.shares == 0) return buy;
+		        	   		else if(row.divperiod==0) return buy + sell;
+		        	   		else return buy + sell + div
+							} 
+		        	}		            
+		        ]
+		 	    ,footerCallback: function (row, data, start, end, display) {
+		 	        var api = this.api(),
+		 	        intVal = function (i) {
+		 	              return typeof i === 'string' ?
+		 	                   i.replace(/[, Rs]|(\.\d{2})/g,"")* 1 :
+		 	                   typeof i === 'number' ?
+		 	                   i : 0;
+		 	        },
+		 	        total2 = api
+		 	            .column(6)
+		 	            .data()
+		 	            .reduce(function (a, b) {
+		 	                return intVal(a) + intVal(b);
+		 	            }, 0);
+		 	       
+		 	         $(api.column(6).footer()).html(
+		 	            '$' + $.number(total2,2)
+		 	         );
+
+			 	     divytd = api
+		 	            .column(8)
+		 	            .data()
+		 	            .reduce(function (a, b) {
+		 	                return intVal(a) + intVal(b);
+		 	            }, 0);
+		 	       
+		 	         $(api.column(8).footer()).html(
+		 	            '$' + $.number(divytd,2)
+		 	         );
+		 	         
+			 	     total3 = api
+		 	            .column(9)
+		 	            .data()
+		 	            .reduce(function (a, b) {
+		 	                return intVal(a) + intVal(b);
+		 	            }, 0);
+		 	       
+		 	         $(api.column(9).footer()).html(
+		 	            '$' + $.number(total3,2)
+		 	         );
+		 	      
+		 	    }
+		     });
+	    	
+	    	var stock = {id:'', name:'', ticker:'', shares:0, date:'', reset:function(){this.id='';this.name='';this.date=''; this.shares=0;}}
+			
+	    	   
+ 	    	$("#zerosharechk").change(function() {
+	    		  console.log("is this checked: " + $(this).prop('checked'))
+	    		  reloadPageContent();
+	    	});
+	    	
+	    	$('#overview tbody').on( 'click', 'i.ico-hist', function () {
+			     var data = overviewtable.row( $(this).parents('tr') ).data();
+			     console.log( "show history for " + data.id + " is " + data.name +"'s ticker is: "+ data.ticker );
+			     
+			     data.hnd = 'history';
+			     
+			     // update modal title
+			     $('#holding-history-title').html("Transaction history for " + data.name + " (" + data.ticker + ")");
+			     
+			     if($.fn.dataTable.isDataTable("#history-table")){
+			    	 var tbl = $('#history-table').DataTable();
+			    	 $('#history-table').empty();
+			    	 tbl.destroy();
+			     }
+			    	 
+			 	 var historytable = $('#history-table').DataTable( {
+				        "ajax":{
+				        	url: "rest"
+				        	,data: data
+				        	,dataSrc: ""
+				        }
+			 	        ,serverSide: true
+				     	,searching: false
+					    ,info:false
+						,lengthChange:false
+					    ,paginate:false
+					    //,scroller: true
+					    //,scrollY: 400
+				        ,columns: [
+				        	{ data: "id", visible:false },
+				        	{ data: "ticker", visible:false },
+				            { data: "activity_date" },
+				            { data: "activity_type" },
+				            { data: "shares" , className: "dt-right",render: function ( data, type, row ) { if(data=='----') return data; else return $.number(data,4); } },
+				            { data: "price", className: "dt-right", render: function ( data, type, row ) { if(data=='----') return data; else return '$' +$.number(data,3); } },
+				            { data: "basis", className: "dt-right", render: function ( data, type, row ) { if(data=='----') return data; else return '$' +$.number(data,2); } },
+				            { data: "gainloss", className: "dt-right", createdCell: function(td, cellData, rowData, row, col) { if(cellData == '----'){}else if(Number(cellData)<0){ $(td).css('color','red'); } else { $(td).css('color','green'); }}, render: function ( data, type, row, meta ) { if(data=='----') return data; else return '$' +$.number(data,2); } },
+				            { "targets": 9, "width":"140px", "orderable":false, "data":null, "defaultContent":"<i class='fa fa-trash-o fa-lg ico-trash' aria-hidden='true'></i>"},
+				        ]
+				     	,destroy:true
+			     });
+			 	 
+			     // show history modal window
+			     $('#holding-history').modal('show');
+			     
+			     $('#history-table tbody').on( 'click', 'i.ico-trash', function () {
+				     var data = historytable.row( $(this).parents('tr') ).data();
+				     console.log( "trashing record for " + data.id + " ticker: " + data.ticker );
+				     
+				     // send delete to server
+					 $.getJSON( "rest?hnd=deletesingletransaction", data, function( resp ) {				    
+					 	
+						 // reload the history table
+						 $('#history-table').DataTable().ajax.reload();
+						 
+				   });				     
+		    	
+		    	});
+	    	});
+
+	    	$('#holding-history').on("hide.bs.modal", function () {				
+				 // reload main page incase of any changes
+				 reloadPageContent();	    	
+			});
+     	
+	    	
+	    	$('#overview tbody').on( 'click', 'button', function () {
+			     var data = overviewtable.row( $(this).parents('tr') ).data();
+			     console.log( "holding " + data.id + " is " + data.name +"'s ticker is: "+ data.ticker );
+			     
+			     stock.id=data.id;
+			     stock.name=data.name;
+			     stock.ticker=data.ticker;
+			     stock.shares=data.shares
+			     
+			     var buysell = $(this).text();
+
+			     //reset form
+			     if(buysell == "buy" || buysell == "sell"){
+			    	 
+			     	$('#' + buysell + '-date').datepicker('update', moment().format("YYYY-MM-DD"));
+			     	$('#' + buysell + '-shares').val("");
+                 	$('#' + buysell + '-price').val("");			    	 
+			    	 
+			     	$('#' + buysell + '-holding-title').html(buysell + " " + data.name + " (" + data.ticker + ")");	
+			     	$('#' + buysell + '-holding').modal('show');
+			     }
+			     else if(buysell == "dividend"){
+			     	$('#dividend-ex-date').datepicker('update', '');
+			     	$('#dividend-pay-date').datepicker('update', '');
+			     	$('#dividend-amount').val("");
+			     	$('#dividend-reinvest-price').val("");
+			     	// uncheck drip 
+			     	$('#drip-check').prop("checked", false);
+			     	
+			     	$('#dividend-holding-title').html("Dividends paid on " + data.name + " (" + data.ticker + ")");	
+			     	$('#dividend-holding').modal('show');			    	 
+			     }
+ 
+			});
+			
+			// purchase save
+			$('#btn-make-purchase').on('click', function(event) {
+				
+		    	var dt = $('#buy-date').val();
+		    	var shares = $('#buy-shares').val();
+		    	var price = $('#buy-price').val();
+		    	 
+		    	stock.date = dt;
+		    	stock.shares = shares;
+		    	stock.price = price;
+			
+				$.getJSON( "rest?hnd=addposition", stock, function( resp ) {				    
+				 	
+					// reset the stock object
+					stock.reset();
+				 	
+					// reload the page
+					reloadPageContent();
+					
+					// hide modal window
+				 	$('#buy-holding').modal('hide');
+				});
+				
+			});
+			
+			// sell save
+			$('#btn-sell-position').on('click', function(event) {
+				
+		    	var dt = $('#sell-date').val();
+		    	var shares = $('#sell-shares').val();
+		    	var price = $('#sell-price').val();
+		    	 
+		    	// can't sell more than we own
+		    	if(shares > stock.shares) shares = stock.shares;
+		    	
+		    	stock.date = dt;
+		    	stock.shares = shares;
+		    	stock.price = price;
+			
+				$.getJSON( "rest?hnd=sellposition", stock, function( resp ) {				    
+				 	
+					// reset the stock object
+					stock.reset();
+				 	
+					// reload the table
+					reloadPageContent();
+					
+					// hide modal window
+				 	$('#sell-holding').modal('hide');
+				});
+				
+			});	
+			
+			// dividend record
+			$('#btn-record-dividend').on('click', function(event) {
+				
+		    	var exdt = $('#dividend-ex-date').val();
+		    	var paydt = $('#dividend-pay-date').val();
+		    	var divamt = $('#dividend-amount').val();
+		    	var drip = $('#drip-check').is(":checked");
+		    	var reinvestprice = $('#dividend-reinvest-price').val();
+		    	
+		    	if(drip && reinvestprice == '') { alert('drip error'); return; }	
+		    	
+		    	var divstock = {id: stock.id, ticker:stock.ticker, exdate: exdt, paydate: paydt, divamount: divamt, drip: drip, reinvestprice: reinvestprice}
+		 
+				$.getJSON( "rest?hnd=recorddividend", divstock, function( resp ) {				    
+				 	
+					// reset the stock object
+					stock.reset();
+									 	
+					// reload the table
+					reloadPageContent();
+					
+					// hide modal window
+				 	$('#dividend-holding').modal('hide');
+				});
+				
+			});				
+	    	
+		 	$('#add-holding').on('click', function(event) {
+	 		    event.preventDefault(); // To prevent default behaviour
+	 		    
+	 		    var form = $('.newholdingform');
+	 		    form.removeClass('was-validated');
+	 		    
+	 		    $("#holding-ticker").val('');
+	 		    $("#holding-name").val('');
+	 		    $("#holding-industry").val('');
+	 		    $("#adddripchk").prop('checked',false);
+	 		    $('#holding-brokerage').prop('selectedIndex',0);
+	 		    $('#holding-div').prop('selectedIndex',0);
+	 		   
+	 		    $('#add-holding-modal').modal('show');
+	 		});
+		 	
+		 	$('#save-new-holding').on('click', function(event) {
+	 		    event.preventDefault(); // To prevent default behaviour
+	 		    
+	 		    
+	 		   var forms = document.getElementsByClassName('newholdingform');
+	 		   var form = $('.newholdingform');
+	 		   
+	 		   if(form[0].checkValidity() === false) {
+	 		       event.preventDefault();
+	 		       event.stopPropagation();
+	 		       form.addClass('was-validated');	 		       
+	 		   }
+	 		   else{
+		 		    
+ 	 			  var period = 0;	 			  
+	 			  switch($("#holding-div").val()){
+	 			    case "No Dividends":
+	 			        perod = 0;
+	 			        break;
+	 			    case "1st month of quarter":
+	 			        period = 1;
+	 			        break;
+	 			    case "2nd month of quarter":
+	 			        period = 2;
+	 			        break;
+	 			    case "3rd month of quarter":
+	 			        period = 3;
+	 			        break;
+	 			    case "Monthly":
+	 			        period = 12;
+	 			        break;
+	 			    case "Semi Annually":
+	 			        period = 6;
+	 			        break;
+	 			    case "Annually":
+	 			        period = 9;
+	 			        break;	 			        
+	 			    default:
+	 			    	period = 0;
+	 			  }
+	 			  
+	 			  var drip = ($("#adddripchk").prop('checked')) ? 1 : 0;
+		 		  
+		 		   var o = {hnd: 'newholding'
+		 			        ,brokerage: $("#holding-brokerage").val()
+		 			        ,ticker: $("#holding-ticker").val()
+		 				    ,name: $("#holding-ticker").val()
+		 				    ,sector: $("#holding-industry").val()
+		 				    ,period: period
+		 				    ,drip: drip
+		 				   }
+		 	 
+		 		   
+		 		   $.getJSON( "rest", o, function( resp ) {				    
+		 		 	   $('#add-holding-modal').modal('hide');						 
+				   });	
+		 		  
+		 		   
+	 		   }
+	 		});
+		 	
+		 	$('#buy-date').datepicker({
+		 	    format: "yyyy-mm-dd",
+		 	    startDate: "2018-01-01",
+		 	    multidate: false,
+		 	    daysOfWeekDisabled: "0,6",
+		 	    autoclose: true,
+			 	   todayHighlight:true
+		 	});
+		 	
+		 	
+		 	$('#sell-date').datepicker({
+		 	    format: "yyyy-mm-dd",
+		 	    startDate: "2011-01-01",
+		 	    multidate: false,
+		 	    daysOfWeekDisabled: "0,6",
+		 	    autoclose: true,
+		 	   todayHighlight:true
+		 	});		
+		 	
+		 	$('#dividend-ex-date').datepicker({
+		 	    format: "yyyy-mm-dd",
+		 	    startDate: "2011-01-01",
+		 	    multidate: false,
+		 	    daysOfWeekDisabled: "0,6",
+		 	    autoclose: true,
+		 	   todayHighlight:true
+		 	});	
+		 	$('#dividend-pay-date').datepicker({
+		 	    format: "yyyy-mm-dd",
+		 	    startDate: "2011-01-01",
+		 	    multidate: false,
+		 	    daysOfWeekDisabled: "0,6",
+		 	    autoclose: true,
+		 	   todayHighlight:true
+		 	});			 	
+	    	
+	    }); //end .ready
+	    
+	    function reloadPageContent(){
+	    	
+	    	var overview = $('#overview').DataTable()
+	    	overview.ajax.reload();	
+	    }
+	    
+	    function switchPortfolio(id){
+	    	
+			$.getJSON( "rest?hnd=swapportfolio&v=" + id, function( data ) {
+				reloadPageContent();
+			});	    	
+	    }
+    
+    </script>
+    
+    
+<div class="container">
+<nav class="navbar navbar-expand navbar-light">
+  <a class="navbar-brand" href="#">Portfolio</a>
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+  <div class="collapse navbar-collapse" id="navbarSupportedContent">
+    <ul class="navbar-nav mr-auto">
+      <li class="nav-item active">
+        <a class="nav-link" href="#">Home <span class="sr-only">(current)</span></a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="dividends">Dividends</a>
+      </li>
+      <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          Switch Portfolio
+        </a>
+        <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+          <a class="dropdown-item" href="javascript:switchPortfolio(1);">Taxable</a>
+          <a class="dropdown-item" href="javascript:switchPortfolio(2);">Retirement</a>
+          <!-- <div class="dropdown-divider"></div>
+          <a class="dropdown-item" href="#">Something else here</a>
+          -->
+        </div>
+      </li>      
+    </ul>
+    <form class="form-inline mt-2 mt-md-0">
+      <!-- <input class="form-control mr-sm-2" type="text" placeholder="Search" aria-label="Search">-->
+      <button id="add-holding" class="btn btn-sm btn-outline-secondary" type="button">Add New Holding</button>
+    </form>
+  </div>
+</nav>
+</div><!-- container -->
+
+<div class="container">
+  <div class="row">
+    <div class="col-12"> 
+	  <table id="overview" class="display compact nowrap" style="width:100%">
+        <thead>
+          <tr>
+            <th>name</th>
+            <th>ticker</th>
+            <th>brokerage</th>
+            <th>Shares</th>
+            <th>Avg. Cost</th>
+            <th>Price</th>
+            <th>Value</th>
+            <th>+/-</th>
+            <th>Dividend YTD</th>
+            <th>Dividends</th>
+            <th></th>            
+          </tr>
+        </thead>
+        <tbody></tbody>
+        <tfoot>
+          <tr>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th></th>
+          	<th>Total Value</th>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th></th>            
+          </tr>
+        </tfoot>        
+      </table>
+          <input id="zerosharechk" type="checkbox"> Show holdings with 0 shares
+    </div>    
+  </div><!-- row -->
+</div><!-- container -->  
+
+
+
+    <!-- Modal -->
+	<div class="modal fade" id="add-holding-modal" tabindex="-1" role="dialog" aria-labelledby="add-holding-modal" aria-hidden="true">
+	  <div class="modal-dialog" role="document">
+	    <div class="modal-content">
+	      <div class="modal-header">
+	        <h6 class="modal-title" id="add-holding-modal-label">Add New Holding</h6>
+	      </div>
+	      <div class="modal-body">
+	      <form class="form needs-validation newholdingform" novalidate>
+	        <div class="form-group form-inline">
+	        <select class="form-control form-control-sm newholding" id="holding-brokerage">
+			  <option>Robinhood</option>
+			  <option>E*TRADE</option>
+			  <option>T.Rowe Price</option>
+			  <option>AXA</option>
+			</select>
+			</div>
+			
+			<div class="form-group form-inline">
+			   <label for="holding-ticker" class="col-sm-2 col-form-label">Ticker:</label>
+			   <div class="col-sm-10">			  
+			       <input type="text" class="form-control" id="holding-ticker" required>
+			       <div class="invalid-feedback">
+		            Please input ticker symbol.
+		           </div>
+			   </div>
+			</div>
+			
+			<div class="form-group form-inline">
+			<label for="holding-name" class="col-sm-2 col-form-label">Company Name:</label>
+			  <div class="col-sm-10">			  
+			    <input type="text" class="form-control newholding" id="holding-name" required>
+			       <div class="invalid-feedback">
+		            Please provide name.
+		           </div>			    
+			  </div>
+			</div>
+			<div class="form-group form-inline">
+			  <label for="holding-industry" class="col-sm-2 col-form-label">Industry:</label>
+			  <div class="col-sm-10">			  
+			    <input type="text" class="form-control newholding" id="holding-industry" required>
+			       <div class="invalid-feedback">
+		            Please provide sector.
+		           </div>			   			    
+			  </div>
+			</div>
+			<div class="form-group form-inline">
+			  <label class="col-sm-2 col-form-label">Dividend Schedule:</label>
+			  <div class="col-sm-10">
+	           <select class="form-control form-control-sm newholding" id="holding-div">
+  	            <option>No Dividends</option>
+			    <option>1st month of quarter</option>
+			    <option>2nd month of quarter</option>
+			    <option>3rd month of quarter</option>
+			    <option>Monthly</option>
+			    <option>Semi Annually</option>
+			    <option>Annually</option>
+			   </select>
+			  </div>
+			</div>
+			<input id="adddripchk" class="newholding" type="checkbox"> Is this a drip account
+			</form>			
+	      </div>
+	      <div class="modal-footer">
+	        <button id='save-new-holding' type="button" class="btn btn-success btn-sm">Save</button>
+	        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+	      </div>
+	    </div>
+	  </div>
+	</div><!-- modal -->
+
+
+<!-- Modal -->
+<div class="modal fade" id="sell-holding" tabindex="-1" role="dialog" aria-labelledby="sell-holding" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title" id="sell-holding-title"></h6>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+	      <div class="form-group has-feedback">
+	      	<input id="sell-date" name="sell_date" type="text" class="form-control" placeholder="pick a date">
+	      </div>
+	            
+		  <div class="form-group">
+            <input id="sell-shares" name="sell-shares" type="number" class="form-control" placeholder="shares">
+		  </div>    
+		  <div class="form-group">
+            <input id="sell-price" name="sell-price" type="text" class="form-control" placeholder="price">
+		  </div>   
+  	 </div>   		
+     <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" id="btn-sell-position">Sell position</button>
+     </div>
+   </div>
+ </div>
+</div>
+<!--  end modal -->	
+
+<!-- Modal -->
+<div class="modal fade" id="buy-holding" tabindex="-1" role="dialog" aria-labelledby="buy-holding" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title" id="buy-holding-title"></h6>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+      
+	      <div class="form-group has-feedback">
+	      	<input id="buy-date" name="buy-date" type="text" class="form-control" placeholder="pick a date">
+	      </div>
+	            
+		  <div class="form-group">
+            <input id="buy-shares" name="buy-shares" type="number" class="form-control" placeholder="shares">
+		  </div>    
+		  <div class="form-group">
+            <input id="buy-price" name="buy-price" type="text" class="form-control" placeholder="price">
+		  </div>  
+  	 </div>   		
+     <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" id="btn-make-purchase">Make Purchase</button>
+     </div>
+   </div>
+ </div>
+</div>
+<!--  end modal -->
+
+<!-- Modal -->
+<div class="modal fade" id="dividend-holding" tabindex="-1" role="dialog" aria-labelledby="dividend-holding" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title" id="dividend-holding-title"></h6>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+      
+	      <div class="form-group has-feedback">
+	      	<input id="dividend-ex-date" name="buy-date" type="text" class="form-control" placeholder="ex-div date">
+	      	<input id="dividend-pay-date" name="buy-date" type="text" class="form-control" placeholder="pay date">
+	      </div>	            
+		  <div class="form-group">
+            <input id="dividend-amount" name="dividend-amount" type="number" class="form-control" placeholder="dividend amount">
+		  </div>   
+		  <div class="form-check">
+			  <input class="form-check-input" type="checkbox" value="" id="drip-check" name="drip-check">
+			  <label class="form-check-label" for="drip-check">
+			    Drip?
+			  </label>
+ 		  </div>
+ 		  <div class="form-group">
+            <input id="dividend-reinvest-price" name="dividend-reinvest-price" type="number" class="form-control" placeholder="re-invest price">
+		  </div>  
+  	 </div>   		
+     <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" id="btn-record-dividend">Record Dividend</button>
+     </div>
+   </div>
+ </div>
+</div><!--  modal -->
+
+<!-- Modal -->
+<div class="modal fade" id="holding-history" tabindex="-1" role="dialog" aria-labelledby="holding-history" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header nowrap">
+        <h6 class="modal-title" id="holding-history-title"></h6>
+      </div>
+      <div class="modal-body">     
+		<table id="history-table" class="display" style="width:100%">
+	        <thead>
+	            <tr>
+	                <th>id</th>
+	                <th>holding id</th>
+	                <th>date</th>
+	                <th>type</th>
+	                <th>shares</th>
+	                <th>price</th>
+	                <th>basis</th>
+	                <th>+/-</th>
+	                <th></th>
+	            </tr>
+	        </thead>
+	    </table>
+  	  </div>   		
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+      </div>
+   </div>
+ </div>
+</div><!-- modal -->
+</body>
+
+</html>

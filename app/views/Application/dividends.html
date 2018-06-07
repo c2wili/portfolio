@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <title>test</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta charset="utf-8">
+
+    #{script 'jquery-3.1.0.min.js' /}
+    #{script 'jquery.number.min.js' /}
+    #{script 'jquery.dataTables.min.js' /}
+    #{script 'DataTables-1.10.12/media/js/jquery.dataTables.min.js' /}
+    #{script 'bootstrap-4.0.0/js/bootstrap.min.js' /} 
+    #{script 'bootstrap-datepicker.min.js' /}
+    #{script 'moment-2.15.1.min.js' /}
+    #{script 'highcharts-6.0.7.js' /}
+    #{script 'd3.v3.js' /}
+    #{script 'sankey.js' /}
+    
+    #{script 'dividendYTDChart.js' /}
+    #{script 'dividendYearlyProjectionChart.js' /}
+    #{script 'dividendMonthlyDetails.js' /}
+    #{script 'dividendMonthlyChart.js' /}
+    #{script 'dividendMonthlyComparison.js' /}
+    #{script 'dividendSectorSummary.js' /}
+    
+    
+    <link rel="stylesheet" type="text/css" href="/public/javascripts/bootstrap-4.0.0/css/bootstrap.min.css" ></link>
+    #{stylesheet 'jquery.dataTables.css' /}
+    #{stylesheet 'bootstrap-datepicker.min.css' /}
+    #{stylesheet 'font-awesome-4.6.3/css/font-awesome.css' /}
+    
+    
+    <style>
+    .modal-title{white-space: nowrap;}
+    #ytd-dividend-chart{height:250px; width:100%;}
+    #proj-dividend-chart{height:250px; width:100%;}
+    #monthly-dividend-chart{height:280px; width:100%; }
+    .modal-lg-cust { max-width: 1325px; }
+    .divgain{background: rgba(142,255,152,0.1)}
+    .divloss{background: rgba(255,0,38,0.1)}
+    .divexpected{background: rgba(5,141,199,0.1)}
+    table.dataTable th.dt-qtr, table.dataTable td.dt-qtr{background: rgba(135,135,135,0.1)}
+    table.dataTable.compact tbody th, table.dataTable.compact tbody td { padding: 3px; }
+    .dataTables_wrapper { font-size: 13px; }
+        .top-buffer { padding-top:30px; }
+        .bottom-buffer{padding-bottom:30px; }
+        td.chg0{background: rgba(255,0,0,0.1)}
+        td.chg1{background: rgba(175,225,40,0.1)}
+        td.chg2{background: rgba(0,255,20,0.2)}
+        
+.node rect {
+  cursor: move;
+  fill-opacity: .9;
+  shape-rendering: crispEdges;
+}
+ 
+.node text {
+  pointer-events: none;
+  text-shadow: 0 1px 0 #fff;
+  font-size: 12px;
+  
+}
+ 
+.link {
+  fill: none;
+  stroke: #000;
+  stroke-opacity: .1;
+}
+ 
+.link:hover {
+  stroke-opacity: .5;
+}
+         
+           .divtotals{font-size:12px;border-top:2px solid #000 !important; background: rgba(107,255,255,0.2) !important;}
+           .divtotalsperiod{font-size:14px; font-weight:bold; border-top:2px solid #000 !important; background: rgba(107,255,255,0.2) !important;}
+    </style>
+    
+</head>
+
+<body>
+
+<div class="container">
+<nav class="navbar navbar-expand-xl navbar-light">
+  <a class="navbar-brand" href="#">Portfolio</a>
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+  <div class="collapse navbar-collapse" id="navbarSupportedContent">
+    <ul class="navbar-nav mr-auto">
+      <li class="nav-item ">
+        <a class="nav-link" href="portfolio">Home</a>
+      </li>
+      <li class="nav-item active">
+        <a class="nav-link" href="#">Dividends</a>
+      </li>
+      <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          Switch Portfolio
+        </a>
+        <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+          <a class="dropdown-item" href="javascript:switchPortfolio(1);">Taxable</a>
+          <a class="dropdown-item" href="javascript:switchPortfolio(2);">Retirement</a>
+          <!-- <div class="dropdown-divider"></div>
+          <a class="dropdown-item" href="#">Something else here</a>
+          -->
+        </div>
+      </li> 
+    </ul>
+  </div>
+</nav>
+</div><!-- container -->
+  
+<div class="container">
+  <div class="row">
+    <div class="col-xs-3 col-md-3">  
+      <div id="ytd-dividend-chart"></div>
+    </div>
+    <div class="col-xs-3 col-md-3">
+      <div id="proj-dividend-chart"></div>
+    </div>
+    <div class="col-xs-6 col-md-6">
+      <div id="monthly-dividend-chart"></div>
+    </div>
+  </div>
+  <div class="row top-buffer">
+    <div class="col-xs-12 col-md-12">  
+      <table id="dividend-details-table" class="compact cell-border nowrap" style="width:100%;">
+        <thead>
+          <tr>
+            <th>ticker</th>
+            <th>divperiod</th>
+            <th>jan</th>
+            <th>feb</th>
+            <th>mar</th>
+            <th>q1</th>
+            <th>apr</th>
+            <th>may</th>
+            <th>jun</th>
+            <th>q2</th>
+            <th>jul</th>
+            <th>aug</th>
+            <th>sep</th>
+            <th>q3</th>
+            <th>oct</th>
+            <th>nov</th>
+            <th>dec</th>
+            <th>q4</th>
+            <th>ytd</th>
+          </tr>
+        </thead>
+        <tfoot>
+          <tr>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th></th>
+          </tr>
+        </tfoot>        
+      </table>
+    </div>
+  </div><!-- row -->
+  <div class="row top-buffer bottom-buffer">
+    <div class="col-12 col-md-3"> 
+      <table id="dividend-monthsummary-table" class="compact cell-border nowrap" style="width:100%">
+        <thead>
+          <tr>
+            <th>month</th>
+            <th>mthnum</th>
+            <th>prior year</th>
+            <th>current year</th>
+            <th>% change</th>
+          </tr>
+        </thead>
+      </table>
+    </div>
+    <div class="col-12 col-md-3"> 
+      <table id="dividend-sectorsummary-table" class="compact cell-border nowrap" style="width:100%">
+        <thead>
+          <tr>
+            <th>sector</th>
+            <th>amount</th>
+            <th>%</th>
+          </tr>
+        </thead>
+      </table>
+    </div>    
+    <div class="col-12 col-md-6"> 
+      <p id="sankey-chart"> </p>
+    </div>               
+  </div><!-- row -->  
+</div><!-- container -->
+ 
+     <script>
+     
+        Highcharts.setOptions({
+           colors: [ '#50B432', '#058DC7', '#ED561B', '#DDDF00', '#24CBE5', '#64E572', '#FF9655', '#FFF263', '#6AF9C4']
+        });
+
+        var yr = 2018;
+        
+        $( document ).ready(function() {
+            loadPage();
+        }); //end .ready
+        
+        function loadPage(){
+            
+            $.getJSON( "rest?hnd=getdividends", function( resp ) {
+                var ytdProjection = loadDividendDetails(resp, yr);
+                
+                buildProjectedChart(resp, yr, ytdProjection );                            
+                buildYTDChart(resp, yr, ytdProjection)                 
+                buildMonthlyChart(resp, yr)                 
+                buildMonthlyComparison(resp, yr)                
+                buildSectorSummary(resp, yr)
+    
+                 buildSankey(yr);
+            });
+        }
+           
+        function switchPortfolio(id){
+            $("#sankey-chart").html("");
+            $.getJSON( "rest?hnd=swapportfolio&v=" + id, function( data ) {
+                loadPage();
+            });            
+        }
+    </script>
+    
+</body>
+
+</html>
