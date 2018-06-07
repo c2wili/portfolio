@@ -750,49 +750,32 @@ public static void getDividendData()throws Exception {
  		
  		try {
  			con = HikariCP.getConnection();
+ 			ps = con.prepareStatement("SELECT MAX(ID)+1 as MAXID FROM portfolio.trades");
+ 			rs = ps.executeQuery();
+ 			int sales_trade_id=0;
+ 			while(rs.next()){
+ 				String maxid = rs.getString("MAXID");
+ 				sales_trade_id = Integer.parseInt(maxid);
+ 			}
+ 			ps.close();
+ 			rs.close();
+ 				
+ 			if(sales_trade_id == 0) throw new Exception("ERROR: sellPosition() unable to determine sales transaction id");  
  			
  			// insert the sell transaction
- 			String sql = "INSERT INTO portfolio.trades (portfolio_id,ticker,activity_type,activity_date,price,shares) VALUES (?,?,'sell',?,?,?)";
+ 			String sql = "INSERT INTO portfolio.trades (id,portfolio_id,ticker,activity_type,activity_date,price,shares) VALUES (?,?,?,'sell',?,?,?)";
  			
  			ps = con.prepareStatement(sql);
- 			ps.setInt(1, portfolioId);
- 			ps.setString(2, ticker);
- 			ps.setDate(3, java.sql.Date.valueOf(date)); 			 			
- 			ps.setDouble(4, Double.parseDouble(price));
- 			ps.setDouble(5, shares);
+ 			ps.setInt(1, sales_trade_id);
+ 			ps.setInt(2, portfolioId);
+ 			ps.setString(3, ticker);
+ 			ps.setDate(4, java.sql.Date.valueOf(date)); 			 			
+ 			ps.setDouble(5, Double.parseDouble(price));
+ 			ps.setDouble(6, shares);
  			
  			ps.executeUpdate();
  			ps.close();
- 			
- 			// get the sell trade id for record just inserted
- 			sql = "SELECT MAX(ID) as sell_id " +
- 			      "\nFROM portfolio.trades " +
- 			      "\nWHERE portfolio_id = ? " +
- 			      "\n  AND ticker = ? " +
- 			      "\n  AND activity_type = 'sell' " +
- 			      "\n  AND activity_date = ? " +
- 			      "\n  AND price = ? " +
- 			      "\n  AND shares = ? ";
- 			
- 			ps = con.prepareStatement(sql);
- 			ps.setInt(1, portfolioId);
- 			ps.setString(2, ticker);
- 			ps.setDate(3, java.sql.Date.valueOf(date)); 			 			
- 			ps.setDouble(4, Double.parseDouble(price));
- 			ps.setDouble(5, shares);
- 			
- 			rs = ps.executeQuery();
- 			
- 			int sales_trade_id = 9999;
- 			while(rs.next()){
- 				sales_trade_id = rs.getInt("sell_id");
- 			}
- 			rs.close();
- 			ps.close();
- 			
- 			if(sales_trade_id == 9999){
- 				throw new Exception("ERROR: sellPosition() unable to determine sales transaction id");  
- 			}
+
  			
  			// get all purchases that still have shares for this holding 			
  			sql = "SELECT x.*, shares-shares_sold shares_at_this_price " +
@@ -966,15 +949,28 @@ Logger.info("div amount " + divamount);
  			} 			
  			Logger.info("shares owned by ex-div date of " + exdate + " was " + shares_owned);
  	    	
+ 			ps = con.prepareStatement("SELECT MAX(ID)+1 as MAXID FROM portfolio.trades");
+ 			rs = ps.executeQuery();
+ 			int div_trade_id=0;
+ 			while(rs.next()){
+ 				String maxid = rs.getString("MAXID");
+ 				div_trade_id = Integer.parseInt(maxid);
+ 			}
+ 			ps.close();
+ 			rs.close();
+ 			
+ 			if(div_trade_id == 0) throw new Exception("ERROR: recordDividend() unable to determine dividend transaction id");  
+ 			
  	    	// insert dividend paid record
- 			sql = "INSERT INTO portfolio.trades(portfolio_id, ticker,activity_type,activity_date,price,shares) VALUES (?,?,'dividend',?,?,?)";
+ 			sql = "INSERT INTO portfolio.trades(id, portfolio_id, ticker,activity_type,activity_date,price,shares) VALUES (?,?,?,'dividend',?,?,?)";
  			
  			ps = con.prepareStatement(sql);
- 			ps.setInt(1, portfolioId);
- 			ps.setString(2, ticker);
- 			ps.setDate(3, java.sql.Date.valueOf(paydate)); 			 			
- 			ps.setDouble(4, Double.parseDouble(divamount));
- 			ps.setDouble(5, shares_owned);
+ 			ps.setInt(1, div_trade_id);
+ 			ps.setInt(2, portfolioId);
+ 			ps.setString(3, ticker);
+ 			ps.setDate(4, java.sql.Date.valueOf(paydate)); 			 			
+ 			ps.setDouble(5, Double.parseDouble(divamount));
+ 			ps.setDouble(6, shares_owned);
  			
  			ps.executeUpdate();
  			ps.close();
@@ -986,12 +982,13 @@ Logger.info("div amount " + divamount);
  	    		
  	    		double dripshares = (shares_owned * Double.parseDouble(divamount)) / Double.parseDouble(reinvestprice);
  	    		 	    		
- 	 			sql = "INSERT INTO portfolio.trades(portfolio_id,ticker,activity_type,activity_date,price,shares) VALUES (?,?,'drip',?,?,?);";
+ 	 			sql = "INSERT INTO portfolio.trades(id,portfolio_id,ticker,activity_type,activity_date,price,shares) VALUES (?,?,?,'drip',?,?,?);";
  	 			
  	 			ps = con.prepareStatement(sql);
- 	 			ps.setInt(1, portfolioId);
- 	 			ps.setString(2, ticker);
- 	 			ps.setDate(3, java.sql.Date.valueOf(paydate)); 			 			
+ 	 			ps.setInt(1, div_trade_id+1);
+ 	 			ps.setInt(2, portfolioId);
+ 	 			ps.setString(3, ticker);
+ 	 			ps.setDate(4, java.sql.Date.valueOf(paydate)); 			 			
  	 			ps.setDouble(4, Double.parseDouble(reinvestprice));
  	 			ps.setDouble(5, dripshares);
  	 			
