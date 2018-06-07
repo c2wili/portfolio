@@ -45,7 +45,7 @@ function buildProjectedChart( o, yr, ytdProjection ){
         },
 	     yAxis: [{
 	       max: ytdProjection,
-	       tickInterval: 500,
+	       tickInterval: 100,
 		   opposite: true,
 		   title: {
 		       text: null

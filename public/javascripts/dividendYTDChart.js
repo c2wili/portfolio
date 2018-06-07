@@ -50,7 +50,7 @@ function buildYTDChart( o, yr, ytdProjection ){
          },
 	     yAxis: [{
 	       max: ytdProjection,
-		   tickInterval: 500,
+		   tickInterval: 100,
 		   title: {
 		       text: null
 		   },

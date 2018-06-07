@@ -48,6 +48,7 @@ function loadDividendDetails( o, yr ){
 				totalNonZero++;
 			}
 		}
+		if(totalNonZero == 0) return 0;
 		
 		return returnTotal / totalNonZero;	    					
 	}
