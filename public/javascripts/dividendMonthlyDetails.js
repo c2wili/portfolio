@@ -97,169 +97,181 @@ function loadDividendDetails( o, yr ){
     				    	thisyeardividends[i].projected = thisyearaverage/nonZero;
     				    }
 					}
-    				// feb:  we have jan actuals to project out
-    				else if(moment().month()==1){
-    					//only can factor out those funds with divperiod=1 
-    					if(rec.divperiod == 1){
-    						thisyeardividends[3].projected = thisyeardividends[0].actual;
-    						thisyeardividends[6].projected = thisyeardividends[0].actual;
-    						thisyeardividends[7].projected = thisyeardividends[0].actual;
-    					}    
-    					 
+    				else{
+    					// build the projection amount
+    					var timesPaid = 0;
+    					var projectedAmount = 0;
+    					for(t=0;t<12;t++){
+    						projectedAmount+=thisyeardividends[t].actual;
+    						if(thisyeardividends[t].actual>0) timesPaid++;
+    					}
+    					if(timesPaid>1) projectedAmount = projectedAmount/timesPaid;
+    					console.log(key + ": " + projectedAmount + "/" + timesPaid)
+    					
+	    				// feb:  we have jan actuals to project out
+	    				if(moment().month()==1){
+	    					//only can factor out those funds with divperiod=1 
+	    					if(rec.divperiod == 1){
+	    						thisyeardividends[3].projected = projectedAmount;
+	    						thisyeardividends[6].projected = projectedAmount;
+	    						thisyeardividends[7].projected = projectedAmount;
+	    					}    
+	    					 
+	    				}
+	    				// mar:  we have jan & feb actuals to project out
+	    				else if(moment().month()== 2){
+	
+	    					if(rec.divperiod == 1){
+	    						thisyeardividends[3].projected = projectedAmount;
+	    						thisyeardividends[6].projected = projectedAmount;
+	    						thisyeardividends[9].projected = projectedAmount;
+	    					} 
+	    					else if(rec.divperiod == 2){
+	    						thisyeardividends[4].projected = projectedAmount;
+	    						thisyeardividends[7].projected = projectedAmount;
+	    						thisyeardividends[10].projected = projectedAmount;
+	    					}     					
+	    				}  
+	    				// apr:  we have jan/feb/mar actuals to project out
+	    				else if(moment().month()== 3){
+	
+	    					if(rec.divperiod == 1){
+	    						thisyeardividends[3].projected = projectedAmount;
+	    						thisyeardividends[6].projected = projectedAmount;
+	    						thisyeardividends[9].projected = projectedAmount;
+	    					} 
+	    					else if(rec.divperiod == 2){
+	    						thisyeardividends[4].projected = projectedAmount;
+	    						thisyeardividends[7].projected = projectedAmount;
+	    						thisyeardividends[10].projected = projectedAmount;
+	    					}
+	    					else if(rec.divperiod == 3){
+	    						thisyeardividends[5].projected = projectedAmount;
+	    						thisyeardividends[8].projected = projectedAmount;
+	    						thisyeardividends[11].projected = projectedAmount;
+	    					}     					
+	    				} 
+	    				else if(moment().month()== 4){
+	
+	    					if(rec.divperiod == 1){
+	    						thisyeardividends[6].projected = projectedAmount;
+	    						thisyeardividends[9].projected = projectedAmount;
+	    					} 
+	    					else if(rec.divperiod == 2){
+	    						thisyeardividends[4].projected = projectedAmount;
+	    						thisyeardividends[7].projected = projectedAmount;
+	    						thisyeardividends[10].projected = projectedAmount;
+	    					}
+	    					else if(rec.divperiod == 3){
+	    						thisyeardividends[5].projected = projectedAmount;
+	    						thisyeardividends[8].projected = projectedAmount;
+	    						thisyeardividends[11].projected = projectedAmount;
+	    					}     					
+	    				}
+	    				else if(moment().month()== 5){
+	
+	    					if(rec.divperiod == 1){
+	    						thisyeardividends[6].projected = projectedAmount;
+	    						thisyeardividends[9].projected = projectedAmount;
+	    					} 
+	    					else if(rec.divperiod == 2){    						
+	    						thisyeardividends[7].projected = projectedAmount;
+	    						thisyeardividends[10].projected = projectedAmount;
+	    					}
+	    					else if(rec.divperiod == 3){
+	    						thisyeardividends[5].projected = projectedAmount;
+	    						thisyeardividends[8].projected = projectedAmount;
+	    						thisyeardividends[11].projected = projectedAmount;
+	    					}     					
+	    				}   
+	    				else if(moment().month()== 6){
+	
+	    					if(rec.divperiod == 1){
+	    						thisyeardividends[6].projected = projectedAmount;
+	    						thisyeardividends[9].projected = projectedAmount;
+	    					} 
+	    					else if(rec.divperiod == 2){
+	    						thisyeardividends[7].projected = projectedAmount;
+	    						thisyeardividends[10].projected = projectedAmount;
+	    					}
+	    					else if(rec.divperiod == 3){
+	    						thisyeardividends[8].projected = projectedAmount;
+	    						thisyeardividends[11].projected = projectedAmount;
+	    					}  
+	    					else if(rec.divperiod == 6){
+	    						thisyeardividends[11].projected = projectedAmount;
+	    					}
+	    				} 
+	    				else if(moment().month()== 7){
+	
+	    					if(rec.divperiod == 1){
+	    						thisyeardividends[9].projected = projectedAmount;
+	    					} 
+	    					else if(rec.divperiod == 2){
+	    						thisyeardividends[7].projected = projectedAmount;
+	    						thisyeardividends[10].projected = projectedAmount;
+	    					}
+	    					else if(rec.divperiod == 3){
+	    						thisyeardividends[8].projected = projectedAmount;
+	    						thisyeardividends[11].projected = projectedAmount;
+	    					}  
+	    					else if(rec.divperiod == 6){
+	    						thisyeardividends[11].projected = projectedAmount;
+	    					}
+	    				}  
+	    				else if(moment().month()== 8){
+	
+	    					if(rec.divperiod == 1){
+	    						thisyeardividends[9].projected = projectedAmount;
+	    					} 
+	    					else if(rec.divperiod == 2){
+	    						thisyeardividends[10].projected = projectedAmount;
+	    					}
+	    					else if(rec.divperiod == 3){
+	    						thisyeardividends[8].projected = projectedamount;
+	    						thisyeardividends[11].projected = projectedAmount;
+	    					}  
+	    					else if(rec.divperiod == 6){
+	    						thisyeardividends[11].projected = projectedAmount;
+	    					}
+	    				} 
+	    				else if(moment().month()== 9){
+	
+	    					if(rec.divperiod == 1){
+	    						thisyeardividends[9].projected = projectedAmount;
+	    					} 
+	    					else if(rec.divperiod == 2){
+	    						thisyeardividends[10].projected = projectedAmount;
+	    					}
+	    					else if(rec.divperiod == 3){
+	    						thisyeardividends[11].projected = projectedAmount;
+	    					}  
+	    					else if(rec.divperiod == 6){
+	    						thisyeardividends[11].projected = projectedAmount;
+	    					}
+	    				}      
+	    				else if(moment().month()== 10){
+	
+	    					if(rec.divperiod == 2){
+	    						thisyeardividends[10].projected = projectedAmount;
+	    					}
+	    					else if(rec.divperiod == 3){
+	    						thisyeardividends[11].projected = projectedAmount;
+	    					}  
+	    					else if(rec.divperiod == 6){
+	    						thisyeardividends[11].projected = projectedAmount;
+	    					}
+	    				}
+	    				else if(moment().month()== 10){
+	
+	    					if(rec.divperiod == 3){
+	    						thisyeardividends[11].projected = projectedAmount;
+	    					}  
+	    					else if(rec.divperiod == 6){
+	    						thisyeardividends[11].projected = projectedAmount;
+	    					}
+	    				} 
     				}
-    				// mar:  we have jan & feb actuals to project out
-    				else if(moment().month()== 2){
-
-    					if(rec.divperiod == 1){
-    						thisyeardividends[3].projected = thisyeardividends[0].actual;
-    						thisyeardividends[6].projected = thisyeardividends[0].actual;
-    						thisyeardividends[9].projected = thisyeardividends[0].actual;
-    					} 
-    					else if(rec.divperiod == 2){
-    						thisyeardividends[4].projected = thisyeardividends[1].actual;
-    						thisyeardividends[7].projected = thisyeardividends[1].actual;
-    						thisyeardividends[10].projected = thisyeardividends[1].actual;
-    					}     					
-    				}  
-    				// apr:  we have jan/feb/mar actuals to project out
-    				else if(moment().month()== 3){
-
-    					if(rec.divperiod == 1){
-    						thisyeardividends[3].projected = thisyeardividends[0].actual;
-    						thisyeardividends[6].projected = thisyeardividends[0].actual;
-    						thisyeardividends[9].projected = thisyeardividends[0].actual;
-    					} 
-    					else if(rec.divperiod == 2){
-    						thisyeardividends[4].projected = thisyeardividends[1].actual;
-    						thisyeardividends[7].projected = thisyeardividends[1].actual;
-    						thisyeardividends[10].projected = thisyeardividends[1].actual;
-    					}
-    					else if(rec.divperiod == 3){
-    						thisyeardividends[5].projected = thisyeardividends[2].actual;
-    						thisyeardividends[8].projected = thisyeardividends[2].actual;
-    						thisyeardividends[11].projected = thisyeardividends[2].actual;
-    					}     					
-    				} 
-    				else if(moment().month()== 4){
-
-    					if(rec.divperiod == 1){
-    						thisyeardividends[6].projected = buildProjection( [thisyeardividends[0].actual, thisyeardividends[3].actual] );
-    						thisyeardividends[9].projected = thisyeardividends[6].projected;
-    					} 
-    					else if(rec.divperiod == 2){
-    						thisyeardividends[4].projected = thisyeardividends[1].actual;
-    						thisyeardividends[7].projected = thisyeardividends[1].actual;
-    						thisyeardividends[10].projected = thisyeardividends[1].actual;
-    					}
-    					else if(rec.divperiod == 3){
-    						thisyeardividends[5].projected = thisyeardividends[2].actual;
-    						thisyeardividends[8].projected = thisyeardividends[2].actual;
-    						thisyeardividends[11].projected = thisyeardividends[2].actual;
-    					}     					
-    				}
-    				else if(moment().month()== 5){
-
-    					if(rec.divperiod == 1){
-    						thisyeardividends[6].projected = buildProjection( [thisyeardividends[0].actual, thisyeardividends[3].actual] );
-    						thisyeardividends[9].projected = thisyeardividends[6].projected;
-    					} 
-    					else if(rec.divperiod == 2){    						
-    						thisyeardividends[7].projected = buildProjection( [thisyeardividends[1].actual, thisyeardividends[4].actual] );
-    						thisyeardividends[10].projected = thisyeardividends[7].projected;
-    					}
-    					else if(rec.divperiod == 3){
-    						thisyeardividends[5].projected = thisyeardividends[2].actual;
-    						thisyeardividends[8].projected = thisyeardividends[2].actual;
-    						thisyeardividends[11].projected = thisyeardividends[2].actual;
-    					}     					
-    				}   
-    				else if(moment().month()== 6){
-
-    					if(rec.divperiod == 1){
-    						thisyeardividends[6].projected = buildProjection( [thisyeardividends[0].actual, thisyeardividends[3].actual] );
-    						thisyeardividends[9].projected = thisyeardividends[6].projected;
-    					} 
-    					else if(rec.divperiod == 2){
-    						thisyeardividends[7].projected = buildProjection( [thisyeardividends[1].actual, thisyeardividends[4].actual] );
-    						thisyeardividends[10].projected = thisyeardividends[7].projected;
-    					}
-    					else if(rec.divperiod == 3){
-    						thisyeardividends[8].projected = buildProjection( [thisyeardividends[2].actual, thisyeardividends[5].actual] );
-    						thisyeardividends[11].projected = thisyeardividends[8].projected;
-    					}  
-    					else if(rec.divperiod == 6){
-    						thisyeardividends[11].projected = thisyeardividends[5].actual;
-    					}
-    				} 
-    				else if(moment().month()== 7){
-
-    					if(rec.divperiod == 1){
-    						thisyeardividends[9].projected = buildProjection( [thisyeardividends[0].actual, thisyeardividends[3].actual, thisyeardividends[6].actual] );
-    					} 
-    					else if(rec.divperiod == 2){
-    						thisyeardividends[7].projected = buildProjection( [thisyeardividends[1].actual, thisyeardividends[4].actual] );
-    						thisyeardividends[10].projected = thisyeardividends[7].projected;
-    					}
-    					else if(rec.divperiod == 3){
-    						thisyeardividends[8].projected = buildProjection( [thisyeardividends[2].actual, thisyeardividends[5].actual] );
-    						thisyeardividends[11].projected = thisyeardividends[8].projected;
-    					}  
-    					else if(rec.divperiod == 6){
-    						thisyeardividends[11].projected = thisyeardividends[5].actual;
-    					}
-    				}  
-    				else if(moment().month()== 8){
-
-    					if(rec.divperiod == 1){
-    						thisyeardividends[9].projected = buildProjection( [thisyeardividends[0].actual, thisyeardividends[3].actual, thisyeardividends[6].actual] );
-    					} 
-    					else if(rec.divperiod == 2){
-    						thisyeardividends[10].projected = buildProjection( [thisyeardividends[1].actual, thisyeardividends[4].actual, thisyeardividends[7].actual] );
-    					}
-    					else if(rec.divperiod == 3){
-    						thisyeardividends[8].projected = buildProjection( [thisyeardividends[2].actual, thisyeardividends[5].actual] );
-    						thisyeardividends[11].projected = thisyeardividends[8].projected;
-    					}  
-    					else if(rec.divperiod == 6){
-    						thisyeardividends[11].projected = thisyeardividends[5].actual;
-    					}
-    				} 
-    				else if(moment().month()== 9){
-
-    					if(rec.divperiod == 1){
-    						thisyeardividends[9].projected = buildProjection( [thisyeardividends[0].actual, thisyeardividends[3].actual, thisyeardividends[6].actual] );
-    					} 
-    					else if(rec.divperiod == 2){
-    						thisyeardividends[10].projected = buildProjection( [thisyeardividends[1].actual, thisyeardividends[4].actual, thisyeardividends[7].actual] );
-    					}
-    					else if(rec.divperiod == 3){
-    						thisyeardividends[11].projected = buildProjection( [thisyeardividends[2].actual, thisyeardividends[5].actual, thisyeardividends[8].actual] );
-    					}  
-    					else if(rec.divperiod == 6){
-    						thisyeardividends[11].projected = thisyeardividends[5].actual;
-    					}
-    				}      
-    				else if(moment().month()== 10){
-
-    					if(rec.divperiod == 2){
-    						thisyeardividends[10].projected = buildProjection( [thisyeardividends[1].actual, thisyeardividends[4].actual, thisyeardividends[7].actual] );
-    					}
-    					else if(rec.divperiod == 3){
-    						thisyeardividends[11].projected = buildProjection( [thisyeardividends[2].actual, thisyeardividends[5].actual, thisyeardividends[8].actual] );
-    					}  
-    					else if(rec.divperiod == 6){
-    						thisyeardividends[11].projected = thisyeardividends[5].actual;
-    					}
-    				}
-    				else if(moment().month()== 10){
-
-    					if(rec.divperiod == 3){
-    						thisyeardividends[11].projected = buildProjection( [thisyeardividends[2].actual, thisyeardividends[5].actual, thisyeardividends[8].actual] );
-    					}  
-    					else if(rec.divperiod == 6){
-    						thisyeardividends[11].projected = thisyeardividends[5].actual;
-    					}
-    				}    				
     				
     			}
     		}
@@ -353,7 +365,10 @@ function loadDividendDetails( o, yr ){
     			if(data.actual == 0 && data.projected == 0)
     				return "";
     			else
-    				return '$' + $.number(data.actual + data.projected,2);
+    				if(data.paid)
+    					return '$' + $.number(data.actual,2);
+    				else 
+    					return '$' + $.number(data.projected,2);
     		}
     	}
     	else{
@@ -396,10 +411,10 @@ function loadDividendDetails( o, yr ){
 	     	,footerCallback: function(row, data, start, end, display) {
 	 	        var api = this.api(),
 	 	        intVal = function (i) {
- 
+
 	 	        	return typeof i === 'number' ?
 		 	                   i : 
-		 	               typeof i === 'object' ? i.actual+i.projected : 0;
+		 	               typeof i === 'object' ? (i.paid) ? i.actual : (i.actual+i.projected) : 0;
 	 	              /*return typeof i === 'string' ?
 	 	                   i.replace(/[, Rs]|(\.\d{2})/g,"")* 1 :
 	 	                   typeof i === 'number' ?
