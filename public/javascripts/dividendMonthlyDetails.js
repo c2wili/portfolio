@@ -293,7 +293,7 @@ function loadDividendDetails( o, yr ){
     	var qtd=0;
 		var ytd=rec.details[yr].reduce(function(total,amount,index){ return total + amount; });
 		var obj = {ticker: rec.ticker, divperiod: rec.divperiod}
-		
+
 		obj.q1 = {actual:0, projected:0, paid:false};
 		obj.q2 = {actual:0, projected:0, paid:false};
 		obj.q3 = {actual:0, projected:0, paid:false};
@@ -302,14 +302,14 @@ function loadDividendDetails( o, yr ){
 		
 		
 		for(i=0;i<12;i++){		
- 
+            if(rec.details[yr][i].paid) rec.details[yr][i].projected=0;
 			obj[monthNames[i]] = rec.details[yr][i];
 			obj[quarters[i]].actual += rec.details[yr][i].actual;
 			obj[quarters[i]].projected += rec.details[yr][i].projected;
-			if(rec.details[yr][i].paid) obj[quarters[i]].paid=true;
+			
 		}
 		
-		obj.ytd.actual = obj.q1.actual +obj.q2.actual + obj.q3.actual + obj.q4.actual
+		obj.ytd.actual = obj.q1.actual + obj.q2.actual + obj.q3.actual + obj.q4.actual
 		obj.ytd.projected = obj.q1.projected +obj.q2.projected + obj.q3.projected + obj.q4.projected
 		
 		data.push(obj);
@@ -366,10 +366,8 @@ function loadDividendDetails( o, yr ){
     			if(data.actual == 0 && data.projected == 0)
     				return "";
     			else
-    				if(data.paid)
-    					return '$' + $.number(data.actual,2);
-    				else 
-    					return '$' + $.number(data.projected,2);
+    				return '$' + $.number(data.actual+data.projected,2);
+    			
     		}
     	}
     	else{
@@ -415,7 +413,7 @@ function loadDividendDetails( o, yr ){
 
 	 	        	return typeof i === 'number' ?
 		 	                   i : 
-		 	               typeof i === 'object' ? (i.paid) ? i.actual : (i.actual+i.projected) : 0;
+		 	               typeof i === 'object' ? (i.actual+i.projected) : 0;
 	 	              /*return typeof i === 'string' ?
 	 	                   i.replace(/[, Rs]|(\.\d{2})/g,"")* 1 :
 	 	                   typeof i === 'number' ?
