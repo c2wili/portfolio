@@ -294,11 +294,11 @@ function loadDividendDetails( o, yr ){
 		var ytd=rec.details[yr].reduce(function(total,amount,index){ return total + amount; });
 		var obj = {ticker: rec.ticker, divperiod: rec.divperiod}
 		
-		obj.q1 = {actual:0, projected:0};
-		obj.q2 = {actual:0, projected:0};
-		obj.q3 = {actual:0, projected:0};
-		obj.q4 = {actual:0, projected:0};
-		obj.ytd = {actual:0, projected:0};
+		obj.q1 = {actual:0, projected:0, paid:false};
+		obj.q2 = {actual:0, projected:0, paid:false};
+		obj.q3 = {actual:0, projected:0, paid:false};
+		obj.q4 = {actual:0, projected:0, paid:false};
+		obj.ytd = {actual:0, projected:0, paid:false};
 		
 		
 		for(i=0;i<12;i++){		
@@ -306,6 +306,7 @@ function loadDividendDetails( o, yr ){
 			obj[monthNames[i]] = rec.details[yr][i];
 			obj[quarters[i]].actual += rec.details[yr][i].actual;
 			obj[quarters[i]].projected += rec.details[yr][i].projected;
+			if(rec.details[yr][i].paid) obj[quarters[i]].paid=true;
 		}
 		
 		obj.ytd.actual = obj.q1.actual +obj.q2.actual + obj.q3.actual + obj.q4.actual
