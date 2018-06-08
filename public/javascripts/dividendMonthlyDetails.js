@@ -358,7 +358,8 @@ function loadDividendDetails( o, yr ){
 
     		if(data.paid){
     			var tip = yr + ": " + '$' + $.number(data.actual,2) +
-    			        "\n" + (yr-1) + ": " + '$' + $.number(data.prioryear,2);
+    			        "\n" + (yr-1) + ": " + '$' + $.number(data.prioryear,2) +
+    			        "\n****: " + '$' + $.number(data.actual - data.prioryear,2) ;
     			        
     			return '<span data-toggle="tooltip" title="' + tip + '">' + '$' + $.number(data.actual,2) + '</span>';
     		}
