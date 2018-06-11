@@ -149,7 +149,7 @@ public static void getDividendData()throws Exception {
 			String sector = rs.getString("sector");
 			String divperiod = rs.getString("divperiod");
 
-			Logger.info(ticker);
+			//Logger.info(ticker);
 
 			jsonRow.addProperty("ticker", ticker);
 			jsonRow.addProperty("activity_date", activity_date);
