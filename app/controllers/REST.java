@@ -922,7 +922,7 @@ Logger.info("div amount " + divamount);
                          "\n  WHERE h.portfolio_id = ? " +
                          "\n    AND h.ticker = ? " +
                          "\n    AND t.activity_type IN ('buy', 'drip') " + 
-                         "\n    AND t.activity_date <= ? " +
+                         "\n    AND t.activity_date < ?  " +
                          "\n   GROUP BY 1,2,3  " +
                          "\n )z";
  			Logger.debug(sql);
