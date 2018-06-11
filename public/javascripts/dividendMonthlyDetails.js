@@ -98,6 +98,45 @@ function loadDividendDetails( o, yr ){
     				    }
 					}
     				else{
+    					//get last actual payment
+    					var lastActual=0;
+    					for(i=0;i<12;i++){        			
+    						if(thisyeardividends[i].paid) lastActual = thisyeardividends[i].actual;
+    				    }
+    					// set projected for all future months
+    					for(i=moment().month();i<12;i++){
+    						if(thisyeardividends[i].paid) continue;
+    						
+    						if(rec.divperiod == 1 && $.inArray(i,[0,3,6,9])>0){
+    							thisyeardividends[i].projected = lastActual;
+    						}
+    						else if(rec.divperiod == 2 && $.inArray(i,[1,4,7,10])>0){
+    							thisyeardividends[i].projected = lastActual;
+    						}
+    						else if(rec.divperiod == 3 && $.inArray(i,[2,5,8,11])>0){
+    							thisyeardividends[i].projected = lastActual;
+    						}
+    						/*
+    						 * 	
+	    					if(rec.divperiod == 1){
+	    						thisyeardividends[3].projected = projectedAmount;
+	    						thisyeardividends[6].projected = projectedAmount;
+	    						thisyeardividends[9].projected = projectedAmount;
+	    					} 
+	    					else if(rec.divperiod == 2){
+	    						thisyeardividends[4].projected = projectedAmount;
+	    						thisyeardividends[7].projected = projectedAmount;
+	    						thisyeardividends[10].projected = projectedAmount;
+	    					}
+	    					else if(rec.divperiod == 3){
+	    						thisyeardividends[5].projected = projectedAmount;
+	    						thisyeardividends[8].projected = projectedAmount;
+	    						thisyeardividends[11].projected = projectedAmount;
+	    					} 
+    						 */
+    					}
+    					/* **
+    					
     					// build the projection amount
     					var timesPaid = 0;
     					var projectedAmount = 0;
@@ -270,7 +309,8 @@ function loadDividendDetails( o, yr ){
 	    					else if(rec.divperiod == 6){
 	    						thisyeardividends[11].projected = projectedAmount;
 	    					}
-	    				} 
+	    				}
+    					*****/
     				}
     				
     			}
