@@ -29,6 +29,7 @@
     .dataTables_wrapper { font-size: 13px; }
     .ico-hist{float:right; cursor:pointer; color: #a8a8a8; font-size: 1.5em; padding-top:5px;}
     .ico-trash{float:right; cursor:pointer; color: #a8a8a8; font-size: 1.5em;}
+    .ico-price{cursor:pointer; padding-right:1px;}
     .modal-title{white-space: nowrap;}
     .modal-lg-cust { max-width: 1325px; }
     table.dataTable th.dt-qtr, table.dataTable td.dt-qtr{background-color:#efefef;}
@@ -95,7 +96,7 @@
 		            { data: "brokerage", visible:false },
 		            { data: "shares" , className: "dt-right",render: function ( data, type, row ) { return $.number(data,4); } },
 		            { data: "avg_cost", className: "dt-right", render: function ( data, type, row ) { return '$' +$.number(data,2); } },
-		            { data: "price" , className: "dt-right",render: function ( data, type, row ) { return '$' +$.number(data,2); } },
+		            { data: "price" , className: "dt-right",render: function ( data, type, row ) { return "<i class='fa fa-usd ico-price' aria-hidden='true'></i>" +$.number(data,2); } },
 		            { data: "val" , className: "dt-right",render: function ( data, type, row ) { return '$' +$.number(data,2); } },
 		            { data: "gainloss" , className: "dt-right",render: function ( data, type, row ) { if(data<0){return '<span style="color:red">($' +$.number(data*-1,2) + ')</span>'; }else {return '<span style="color:green">$' +$.number(data,2) + '</span>';} } },
 		            { data: "div_ytd" , className: "dt-right", render: function ( data, type, row ) { return '$' +$.number(data,2); } },
@@ -161,6 +162,26 @@
  	    	$("#zerosharechk").change(function() {
 	    		  console.log("is this checked: " + $(this).prop('checked'))
 	    		  reloadPageContent();
+	    	});
+	    	
+	    	$('#overview tbody').on('click', 'i.ico-price', function () {	    		 
+			     var data = overviewtable.row( $(this).parents('tr') ).data();
+			     console.log( "set price for " + data.id + " is " + data.name +"'s ticker is: "+ data.ticker );
+			     bootbox.prompt({
+			    	 title: "Enter new price for " + data.ticker + " (" + data.name + ")"
+			    	 ,callback: function(result){
+			    		  if(result){
+			    			  var stock = {price: result};
+			    			  $.getJSON( "rest?hnd=updateprice", stock, function( resp ) {				    
+			  				 	 
+			  					// reload the page
+			  					reloadPageContent();
+			  					 
+			  				});
+			    		  }
+			    	 }
+			     });
+			     
 	    	});
 	    	
 	    	$('#overview tbody').on( 'click', 'i.ico-hist', function () {
@@ -445,14 +466,13 @@
 	 			    default:
 	 			    	period = 0;
 	 			  }
-	 			  
 	 			   
 	 			  var drip = ($("#adddripchk").prop('checked')) ? 1 : 0;
 		 		  
 		 		   var o = {hnd: 'newholding'
 		 			        ,brokerage: $("#holding-brokerage").prop('selectedIndex')
 		 			        ,ticker: $("#holding-ticker").val()
-		 				    ,name: $("#holding-name").val()
+		 				    ,name: $("#holding-ticker").val()
 		 				    ,sector: $("#holding-industry").val()
 		 				    ,period: period
 		 				    ,drip: drip
