@@ -29,11 +29,16 @@
     .dataTables_wrapper { font-size: 13px; }
     .ico-hist{float:right; cursor:pointer; color: #a8a8a8; font-size: 1.5em; padding-top:5px;}
     .ico-trash{float:right; cursor:pointer; color: #a8a8a8; font-size: 1.5em;}
-    .ico-price{cursor:pointer; padding-right:1px;}
+    .ico-price{cursor:pointer; padding-right:1px; color:#6d6d6d;}
     .modal-title{white-space: nowrap;}
     .modal-lg-cust { max-width: 1325px; }
     table.dataTable th.dt-qtr, table.dataTable td.dt-qtr{background-color:#efefef;}
     .histyear{cursor:pointer;}
+    
+    
+    .bootbox .modal-header{display:inline-block !important;}
+    .bootbox .modal-title{font-size:1em; width:100%;}
+    .bootbox .modal-header .close{padding:0; margin:0; float:right;}
     </style>
 
 
@@ -166,16 +171,16 @@
 	    	
 	    	$('#overview tbody').on('click', 'i.ico-price', function () {	    		 
 			     var data = overviewtable.row( $(this).parents('tr') ).data();
-			     console.log( "set price for " + data.id + " is " + data.name +"'s ticker is: "+ data.ticker );
+			     console.log( "set price for " + data.name +" ticker: "+ data.ticker );
 			     bootbox.prompt({
-			    	 title: "Enter new price for " + data.ticker + " (" + data.name + ")"
+			    	 title: "Enter new price for <br/>" + data.ticker + " (" + data.name + ")"
 			    	 ,callback: function(result){
 			    		  if(result){
-			    			  var stock = {price: result};
+			    			  var stock = {ticker: data.ticker, price: result};
 			    			  $.getJSON( "rest?hnd=updateprice", stock, function( resp ) {				    
 			  				 	 
 			  					// reload the page
-			  					reloadPageContent();
+			  					location.reload();
 			  					 
 			  				});
 			    		  }

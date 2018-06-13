@@ -105,89 +105,127 @@ public class REST extends Controller {
     	else if(hnd.equals("getdividends")){
     		getDividendData();
     	}
+    	else if(hnd.equals("updateprice")){
+    		updateStockPrice();
+    	}
     	else{
     		throw new Exception("Handler value (" + hnd + ") is unrecognized.");
     	}    	    	   	
     }
 
-public static void getDividendData()throws Exception {
-
-	PreparedStatement ps = null;
-	Connection con = null;
-	ResultSet rs = null;
-
-	JsonArray  jsonRows = new JsonArray();
-
-	try {
-		con = HikariCP.getConnection();
-
-		String sql = "\n SELECT t.*, h.sector, h.divperiod " +
-		 "\n FROM portfolio.trades t " +
-		 "\n JOIN portfolio.holdings h " +
-		 "\n   ON t.ticker = h.ticker " +
-		 "\n WHERE t.activity_type = 'dividend' " +
-		 "\n   AND t.portfolio_id = ? " +
-		 "\n ORDER BY t.ticker, t.activity_date ";
-
-		Logger.info(sql);
-
-		ps = con.prepareStatement(sql);
-		ps.setInt(1, portfolioId);
-
-		rs = ps.executeQuery();
-
-
-
-		while(rs.next()){
-
-			JsonObject jsonRow = new JsonObject();
-
-			String ticker = rs.getString("ticker").trim();
-			String activity_date = rs.getString("activity_date");
-			String price = rs.getString("price");
-			String shares = rs.getString("shares");
-			String sector = rs.getString("sector");
-			String divperiod = rs.getString("divperiod");
-
-			//Logger.info(ticker);
-
-			jsonRow.addProperty("ticker", ticker);
-			jsonRow.addProperty("activity_date", activity_date);
-			jsonRow.addProperty("sector", sector);
-			jsonRow.addProperty("divperiod", Integer.parseInt(divperiod));
-			jsonRow.addProperty("price", Double.parseDouble(price));
-			jsonRow.addProperty("shares", Double.parseDouble(shares));
-
-			jsonRows.add(jsonRow);
-
-		}
-		ps.close();
-		rs.close();
-
-		renderJSON(jsonRows);
-
-	} 
-	catch (Exception e) {
-		Logger.error("getDividendData caught exception " + e.getMessage());
-		throw new Exception("ERROR: getDividendData() " + e.getMessage());  
-	} 
-	finally {
-
-		try {				
-			rs.close();
-			ps.close();
-			HikariCP.close();
-
-			// use the Play connection close method !important
-			if(!con.isClosed()) con.close();
-		} catch (SQLException e) {
-	   	    Logger.error("getDividendData: Error closing connection " + e.getMessage());
+	public static void updateStockPrice() throws Exception {
+	
+		String ticker = (String)requestParams.get("ticker");
+		String price = (String)requestParams.get("price");
+		
+		PreparedStatement ps = null;
+		Connection con = null;
+			
+		try {
+			con = HikariCP.getConnection();
+			ps = con.prepareStatement("INSERT INTO portfolio.quote_hist (ts,ticker,price) VALUES (now(),?,?)");
+			
+		    
+	        ps.setString(1, ticker);
+	        ps.setDouble(2, Double.parseDouble(price));
+	        ps.executeUpdate();
+	        ps.close();
+			
+	        renderJSON("{\"success\":true}");
+			
 		} 
+		catch (Exception e) {
+			Logger.error("updateStockPrice caught exception " + e.getMessage());
+			throw new Exception("ERROR: updateStockPrice() " + e.getMessage());  
+		} 
+		finally {
+			
+			try {		
+				ps.close(); 
+				HikariCP.close();
+				
+			} catch (SQLException e) {
+				Logger.error("updateStockPrice: Error closing connection " + e.getMessage());
+			} 
+		}	
+	}
+
+	public static void getDividendData()throws Exception {
+	
+		PreparedStatement ps = null;
+		Connection con = null;
+		ResultSet rs = null;
+	
+		JsonArray  jsonRows = new JsonArray();
+	
+		try {
+			con = HikariCP.getConnection();
+	
+			String sql = "\n SELECT t.*, h.sector, h.divperiod " +
+			 "\n FROM portfolio.trades t " +
+			 "\n JOIN portfolio.holdings h " +
+			 "\n   ON t.ticker = h.ticker " +
+			 "\n WHERE t.activity_type = 'dividend' " +
+			 "\n   AND t.portfolio_id = ? " +
+			 "\n ORDER BY t.ticker, t.activity_date ";
+	
+			Logger.info(sql);
+	
+			ps = con.prepareStatement(sql);
+			ps.setInt(1, portfolioId);
+	
+			rs = ps.executeQuery();
+	
+	
+	
+			while(rs.next()){
+	
+				JsonObject jsonRow = new JsonObject();
+	
+				String ticker = rs.getString("ticker").trim();
+				String activity_date = rs.getString("activity_date");
+				String price = rs.getString("price");
+				String shares = rs.getString("shares");
+				String sector = rs.getString("sector");
+				String divperiod = rs.getString("divperiod");
+	
+				//Logger.info(ticker);
+	
+				jsonRow.addProperty("ticker", ticker);
+				jsonRow.addProperty("activity_date", activity_date);
+				jsonRow.addProperty("sector", sector);
+				jsonRow.addProperty("divperiod", Integer.parseInt(divperiod));
+				jsonRow.addProperty("price", Double.parseDouble(price));
+				jsonRow.addProperty("shares", Double.parseDouble(shares));
+	
+				jsonRows.add(jsonRow);
+	
+			}
+			ps.close();
+			rs.close();
+	
+			renderJSON(jsonRows);
+	
+		} 
+		catch (Exception e) {
+			Logger.error("getDividendData caught exception " + e.getMessage());
+			throw new Exception("ERROR: getDividendData() " + e.getMessage());  
+		} 
+		finally {
+	
+			try {				
+				rs.close();
+				ps.close();
+				HikariCP.close();
+	
+				// use the Play connection close method !important
+				if(!con.isClosed()) con.close();
+			} catch (SQLException e) {
+		   	    Logger.error("getDividendData: Error closing connection " + e.getMessage());
+			} 
   	    }
 
 	}
-
-
 
     public static void deleteHistory() throws Exception {
 
@@ -807,8 +845,8 @@ public static void getDividendData()throws Exception {
  			rs = ps.executeQuery();
 
  			psDetail = con.prepareStatement("INSERT INTO portfolio.salesdetail " +
- 			                                "(portfolio_id,ticker, trades_id,buy_trades_id,sales_date,shares,sale_price,basis,gain_loss) " +
- 			                                "VALUES (?,?,?,?,?,?,?,?,?);");
+ 			                                "(ts,portfolio_id,ticker, trades_id,buy_trades_id,sales_date,shares,sale_price,basis,gain_loss) " +
+ 			                                "VALUES (now(),?,?,?,?,?,?,?,?,?);");
  			
  			// determine the cost basis and create the salesdetail record(s)
  			while(rs.next()){
@@ -892,8 +930,7 @@ public static void getDividendData()throws Exception {
     	String exdate = (String)requestParams.get("exdate");
     	String paydate = (String)requestParams.get("paydate");
     	String divamount = (String)requestParams.get("divamount");
-    	    	
-Logger.info("div amount " + divamount);
+    	    	 
 
     	boolean drip = false;
     	if(((String)requestParams.get("drip")).equals("true")) drip = true;

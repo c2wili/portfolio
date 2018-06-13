@@ -87,7 +87,7 @@ sessionHash=null;
 	    	    ps = con.prepareStatement("SELECT ticker,price FROM( " +
                                           "  SELECT ticker, price, RANK() over (partition BY ticker ORDER BY ts DESC) rnk " +
                                           "  FROM PORTFOLIO.QUOTE_HIST " +
-                                          "  WHERE CAST(TS AS DATE) = CURRENT_DATE" + dateoffset + 
+                                          "  WHERE CAST(TS AS DATE) >= CURRENT_DATE-50" + dateoffset + 
                                           ")z " +
                                           "WHERE rnk = 1");
 	    	    rs = ps.executeQuery();
@@ -97,7 +97,7 @@ sessionHash=null;
 				while(rs.next()){
 					String ticker = rs.getString("ticker").trim();
 					String price = rs.getString("price");
-Logger.info("FROM DB: " + ticker + ", " + price);
+
 					Quote q = new Quote(ticker, price);
 					quotes.put(ticker,  q);
 					r++;
