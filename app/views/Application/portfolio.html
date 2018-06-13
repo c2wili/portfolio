@@ -445,13 +445,14 @@
 	 			    default:
 	 			    	period = 0;
 	 			  }
+	 			  
 	 			   
 	 			  var drip = ($("#adddripchk").prop('checked')) ? 1 : 0;
 		 		  
 		 		   var o = {hnd: 'newholding'
 		 			        ,brokerage: $("#holding-brokerage").prop('selectedIndex')
 		 			        ,ticker: $("#holding-ticker").val()
-		 				    ,name: $("#holding-ticker").val()
+		 				    ,name: $("#holding-name").val()
 		 				    ,sector: $("#holding-industry").val()
 		 				    ,period: period
 		 				    ,drip: drip
