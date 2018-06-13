@@ -695,6 +695,7 @@ public static void getDividendData()throws Exception {
  		PreparedStatement ps = null;
  		Connection con = null;
  	
+ 		
  		try {
  			con = HikariCP.getConnection();
  			
