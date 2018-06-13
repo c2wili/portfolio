@@ -698,14 +698,14 @@ public static void getDividendData()throws Exception {
  		try {
  			con = HikariCP.getConnection();
  			
- 			String sql = "INSERT INTO portfolio.holdings (portfolio_id,ticker,name,brokerage,drip,divperiod,sector) VALUES (?,?,?,?,?,?,?)";
+ 			String sql = "INSERT INTO portfolio.holdings (portfolio_id,ticker,name,brokerage_id,drip,divperiod,sector) VALUES (?,?,?,?,?,?,?)";
  			Logger.debug(sql);
  			
  			ps = con.prepareStatement(sql);
  			ps.setInt(1, portfolioId);
  			ps.setString(2, ticker);
  			ps.setString(3, name);
- 			ps.setString(4, brokerage);
+ 			ps.setInt(4, Integer.parseInt(brokerage));
  			ps.setInt(5, Integer.parseInt(drip)); 			 			
  			ps.setInt(6, Integer.parseInt(period));
  			ps.setString(7, sector);
