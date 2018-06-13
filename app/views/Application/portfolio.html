@@ -12,6 +12,7 @@
 	#{script 'DataTables-1.10.12/media/js/jquery.dataTables.min.js' /}
 	#{script 'bootstrap-4.0.0/js/bootstrap.min.js' /} 
 	#{script 'bootstrap-datepicker.min.js' /}
+	#{script 'bootbox.min.js' /}
 	#{script 'moment-2.15.1.min.js' /}
 	
 	#{script 'd3.v3.js' /}
@@ -31,6 +32,7 @@
     .modal-title{white-space: nowrap;}
     .modal-lg-cust { max-width: 1325px; }
     table.dataTable th.dt-qtr, table.dataTable td.dt-qtr{background-color:#efefef;}
+    .histyear{cursor:pointer;}
     </style>
 
 
@@ -39,8 +41,26 @@
 <body>
 
     <script>
-
     
+    function filterhistory(year){
+
+    	if(year == 0){
+    		$('#history-table').DataTable()
+    		  .columns( 2 )
+    	      .search( '-' )
+    	      .draw();
+    	}
+    	else{    	
+	    	$('#history-table').DataTable()
+	    	    .columns( 2 )
+	    	    .search( year )
+	    	    .draw();
+    	}
+
+    }
+
+    	var yr = 2018;
+    	
 	    $( document ).ready(function() {
 	    	
 /*
@@ -149,9 +169,6 @@
 			     
 			     data.hnd = 'history';
 			     
-			     // update modal title
-			     $('#holding-history-title').html("Transaction history for " + data.name + " (" + data.ticker + ")");
-			     
 			     if($.fn.dataTable.isDataTable("#history-table")){
 			    	 var tbl = $('#history-table').DataTable();
 			    	 $('#history-table').empty();
@@ -164,8 +181,9 @@
 				        	,data: data
 				        	,dataSrc: ""
 				        }
-			 	        ,serverSide: true
-				     	,searching: false
+			 	        ,sDom: '<"top"i>rt<"bottom"lp><"clear">' //hide the search box ("f" is not in top or bottom)
+			 	        //,serverSide: true
+				     	,searching: true
 					    ,info:false
 						,lengthChange:false
 					    ,paginate:false
@@ -182,24 +200,71 @@
 				            { data: "gainloss", className: "dt-right", createdCell: function(td, cellData, rowData, row, col) { if(cellData == '----'){}else if(Number(cellData)<0){ $(td).css('color','red'); } else { $(td).css('color','green'); }}, render: function ( data, type, row, meta ) { if(data=='----') return data; else return '$' +$.number(data,2); } },
 				            { "targets": 9, "width":"140px", "orderable":false, "data":null, "defaultContent":"<i class='fa fa-trash-o fa-lg ico-trash' aria-hidden='true'></i>"},
 				        ]
+			 	        ,order: [[ 2, "asc" ]]
 				     	,destroy:true
+				     	,initComplete: function(settings,json){
+				     		
+						    // update modal title
+						    
+						    var yearLinks = "<span class='histyear' onclick='filterhistory(0);'>All</span>"
+						    						  
+						    var years= "";
+						    $.each( historytable.rows().data(), function( key, o ) {
+						        if(o.activity_date.substring(0,4) != years ){						        	
+						        	if(years != "") yearLinks += " | <span class='histyear' onclick='filterhistory(" + years + ");'>" + years + "</span>"
+						        	years = o.activity_date.substring(0,4);
+						        }
+						    });
+						    yearLinks += " | <span class='histyear' onclick='filterhistory(" + years + ");'>" + years + "</span>"
+						    
+						    $('#holding-history-title').html("Transaction history for " + data.name + " (" + data.ticker + ")<br/>" + yearLinks);
+				     		
+				     		/*
+						 	var filteredData = historytable
+					 	    .column( 2 )
+					 	    .data()
+					 	    .filter( function ( value, index ) {
+					 	    	console.log(value.substring(0,4) == yr)
+					 	        //return (value.substring(0,4) == yr) ? true : false;
+					 	    	return false;
+					 	    } );
+				     		*/
+				     	}
 			     });
 			 	 
+			 	
 			     // show history modal window
 			     $('#holding-history').modal('show');
 			     
 			     $('#history-table tbody').on( 'click', 'i.ico-trash', function () {
 				     var data = historytable.row( $(this).parents('tr') ).data();
-				     console.log( "trashing record for " + data.id + " ticker: " + data.ticker );
 				     
-				     // send delete to server
-					 $.getJSON( "rest?hnd=deletesingletransaction", data, function( resp ) {				    
-					 	
-						 // reload the history table
-						 $('#history-table').DataTable().ajax.reload();
-						 
-				   });				     
-		    	
+				     bootbox.confirm({
+				    	    message: "Do you want to remove this history record?",
+				    	    buttons: {
+				    	        confirm: {
+				    	        	label: '<i class="fa fa-check"></i> Yes',
+				    	            className: 'btn-success'
+				    	        },
+				    	        cancel: {
+				    	        	label: '<i class="fa fa-times"></i> No',
+				    	            className: 'btn-danger'
+				    	        }
+				    	    },
+				    	    callback: function (result) {
+				    	        if(result){
+				    	        	console.log( "trashing record for " + data.id + " ticker: " + data.ticker );
+				    	        	
+				    	        	 // send delete to server
+									 $.getJSON( "rest?hnd=deletesingletransaction", data, function( resp ) {
+										 // reload the history table
+										 $('#history-table').DataTable().ajax.reload();										 
+								     });	
+				    	        }
+				    	        else{}
+				    	    }
+				    	});
+  	
 		    	});
 	    	});
 
@@ -380,11 +445,11 @@
 	 			    default:
 	 			    	period = 0;
 	 			  }
-	 			  
+	 			   
 	 			  var drip = ($("#adddripchk").prop('checked')) ? 1 : 0;
 		 		  
 		 		   var o = {hnd: 'newholding'
-		 			        ,brokerage: $("#holding-brokerage").val()
+		 			        ,brokerage: $("#holding-brokerage").prop('selectedIndex')
 		 			        ,ticker: $("#holding-ticker").val()
 		 				    ,name: $("#holding-name").val()
 		 				    ,sector: $("#holding-industry").val()
@@ -546,7 +611,8 @@
 	        <div class="form-group form-inline">
 	        <select class="form-control form-control-sm newholding" id="holding-brokerage">
 			  <option>Robinhood</option>
-			  <option>E*TRADE</option>
+			  <option>ETRADE</option>
+			  <option>Vanguard</option>
 			  <option>T.Rowe Price</option>
 			  <option>AXA</option>
 			</select>
