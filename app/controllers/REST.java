@@ -108,10 +108,102 @@ public class REST extends Controller {
     	else if(hnd.equals("updateprice")){
     		updateStockPrice();
     	}
+    	else if(hnd.equals("getprices")){
+    		updatePrices();
+    	}
     	else{
     		throw new Exception("Handler value (" + hnd + ") is unrecognized.");
     	}    	    	   	
     }
+	public static void updatePrices() throws Exception {
+		
+		PreparedStatement ps = null;
+		Connection con = null;
+		ResultSet rs = null;
+		
+    	StringJoiner joiner = new StringJoiner(",");
+    	try{
+    	    con = HikariCP.getConnection();
+    	    ps = con.prepareStatement("SELECT ticker " +
+                                      "FROM PORTFOLIO.HOLDINGS " +
+                                      "GROUP BY 1");
+    	    rs = ps.executeQuery();
+	    
+			while(rs.next()){
+				String ticker = rs.getString("ticker");
+				joiner.add(ticker.trim());
+			}
+    	    ps.close();
+    	    
+    	}
+    	catch(Exception e){
+    		Logger.info("error getting quotes from DB: " + e.getMessage());
+    	}
+    	finally{
+			try {				
+				DbUtils.closeQuietly(ps);
+				DbUtils.closeQuietly(rs);
+				HikariCP.close();
+			} 
+			catch (Exception e) {
+				Logger.error("getHistory: Error closing connection " + e.getMessage());
+			} 
+    	}			
+    	
+    	String symbols = joiner.toString(); 
+		try{		    	
+	    		
+            WSRequest req = WS.url("https://www.alphavantage.co/query?function=BATCH_STOCK_QUOTES&symbols=" + symbols + "&apikey=CMWNJD2K400SVE2D");
+            HttpResponse res = null;
+            
+            res = req.get();
+            
+            StringWriter writer = new StringWriter();
+            IOUtils.copy(res.getStream(), writer);
+            
+            String rawquotes = writer.toString();
+            rawquotes = rawquotes.replace("\n", "").replace("\r", "").replaceAll("  ", "");
+            rawquotes = rawquotes.replaceAll("1. symbol", "symbol").replaceAll("2. price","price").replaceAll("3. volume", "volume").replaceAll("4. timestamp","timestamp");
+            rawquotes = rawquotes.replaceAll("Stock Quotes", "quotes");
+            rawquotes = "{" + rawquotes.substring(rawquotes.indexOf("\"quotes\":"), rawquotes.length());
+            Logger.info("stock quote response from webservice: " + rawquotes);
+
+            Gson gson = new GsonBuilder().create();
+    		QuoteResponse qr = gson.fromJson(rawquotes, QuoteResponse.class);
+    		
+    		sessionHash.put("quotes", qr.getQuotes());
+             
+    		// save these quotes to the DB
+    	    con = HikariCP.getConnection();
+
+
+    	    //ps = con.prepareStatement("INSERT INTO portfolio.quote_hist (ticker,price,ts) VALUES (?,?,?::timestamp)");
+    	    ps = con.prepareStatement("INSERT INTO portfolio.quote_hist (ts,ticker,price) VALUES (now(),?,?)");
+
+    	    for (String key : qr.getQuotes().keySet()) {
+
+    	        ps.setString(1, qr.getQuotes().get(key).getTicker());
+    	        ps.setDouble(2, qr.getQuotes().get(key).getPrice());
+    	        ps.addBatch();
+    	    }
+    	    ps.executeBatch();
+    	    ps.close();
+    	    Logger.info("quotes saved to DB");
+    	    renderJSON("{\"success\":true}");
+    	}
+    	catch(Exception e){
+    		Logger.info("error parsing quotes " + e.getMessage());
+    	}
+    	finally{
+			try {				
+				DbUtils.closeQuietly(ps);
+				HikariCP.close();
+			} 
+			catch (Exception e) {
+				Logger.error("getHistory: Error closing connection " + e.getMessage());
+			} 
+    	}
+	}
 
 	public static void updateStockPrice() throws Exception {
 	
