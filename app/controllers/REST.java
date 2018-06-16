@@ -1022,7 +1022,8 @@ public class REST extends Controller {
     	String exdate = (String)requestParams.get("exdate");
     	String paydate = (String)requestParams.get("paydate");
     	String divamount = (String)requestParams.get("divamount");
-    	    	 
+    	  
+    	Logger.info("Recording dividend " + ticker + " $" + divamount);
 
     	boolean drip = false;
     	if(((String)requestParams.get("drip")).equals("true")) drip = true;
@@ -1111,7 +1112,8 @@ public class REST extends Controller {
  	    		String reinvestprice = (String)requestParams.get("reinvestprice");
  	    		
  	    		double dripshares = (shares_owned * Double.parseDouble(divamount)) / Double.parseDouble(reinvestprice);
- 	    		 	    		
+		 	    Logger.info("Dividend re-invest shares purchased " + dripshares);
+		 	    
  	 			sql = "INSERT INTO portfolio.trades(id,portfolio_id,ticker,activity_type,activity_date,price,shares) VALUES (?,?,?,'drip',?,?,?);";
  	 			
  	 			ps = con.prepareStatement(sql);
@@ -1119,8 +1121,8 @@ public class REST extends Controller {
  	 			ps.setInt(2, portfolioId);
  	 			ps.setString(3, ticker);
  	 			ps.setDate(4, java.sql.Date.valueOf(paydate)); 			 			
- 	 			ps.setDouble(4, Double.parseDouble(reinvestprice));
- 	 			ps.setDouble(5, dripshares);
+ 	 			ps.setDouble(5, Double.parseDouble(reinvestprice));
+ 	 			ps.setDouble(6, dripshares);
  	 			
  	 			ps.executeUpdate();
  	 			ps.close(); 	    		
