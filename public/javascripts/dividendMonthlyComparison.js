@@ -19,6 +19,8 @@ function buildMonthlyComparison( o, yr ){
     });
  
     
+    var ytd = {cy:0, py:0}
+    
     var monthcompare = []; 
 	for(i=0;i<12;i++){
 		var change = 0;
@@ -29,9 +31,16 @@ function buildMonthlyComparison( o, yr ){
 		else 
 			change = ((monthlyTotals.cy[i]-monthlyTotals.py[i]) / monthlyTotals.py[i]) * 100;
 		
+		ytd.cy+=monthlyTotals.cy[i]
+		if(i <= moment().month()) ytd.py+=monthlyTotals.py[i];
+		
 		var o = {mth:monthfull[i], mthnum:i+1, cy:monthlyTotals.cy[i], py:monthlyTotals.py[i],chg:change}
 		monthcompare.push(o);
 	}
+	
+	//build full year comparison
+	var change = ((ytd.cy-ytd.py) / ytd.py) * 100;
+	monthcompare.push({mth:"Year-to-Date", mthnum:999, cy:ytd.cy, py:ytd.py, chg:change});
       
     if($.fn.dataTable.isDataTable("#dividend-monthsummary-table")){
     	var tbl = $('#dividend-monthsummary-table').DataTable();

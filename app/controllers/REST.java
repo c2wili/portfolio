@@ -531,7 +531,7 @@ public class REST extends Controller {
 						 "\nORDER BY activity_date, activity_type";
 			
 			
-			Logger.debug(sql);
+			Logger.info(sql);
 			
 			
 			ps = con.prepareStatement(sql);
