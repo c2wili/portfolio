@@ -5,13 +5,20 @@ function loadDividendDetails( o, yr ){
 	var tickers = [];
 
 	var oDividend = [];
+	var retire=false;
 	for(i=0;i<12;i++){
 		oDividend.push({actual:0, projected:0, prioryear:0, paid:false});
 	}
 	
 	//dummy record for 2018
 	//remove all vwilx code in 2019!!!!!!!!!!!
- 	o.push({ticker: 'VWILX', activity_date: '2017-01-01', sector:'Mutual Fund',divperiod:9,price:0,shares:0})
+    $.each(o, function(index, rec){
+    	if(rec.ticker == 'VWENX'){
+    		retire = true;
+    		return false;
+    	}
+    });
+    if(retire)o.push({ticker: 'VWILX', activity_date: '2017-01-01', sector:'Mutual Fund',divperiod:9,price:0,shares:0})
  	
     $.each(o, function(index, rec){   	
     console.log(rec)	
