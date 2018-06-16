@@ -8,9 +8,13 @@ function loadDividendDetails( o, yr ){
 	for(i=0;i<12;i++){
 		oDividend.push({actual:0, projected:0, prioryear:0, paid:false});
 	}
+	
+	//dummy record for 2018
+	//remove all vwilx code in 2019!!!!!!!!!!!
+ 	o.push({ticker: 'VWILX', activity_date: '2017-01-01', sector:'Mutual Fund',divperiod:9,price:0,shares:0})
  	
     $.each(o, function(index, rec){   	
-    	
+    console.log(rec)	
     	var activity_date = moment(rec.activity_date);
 		var activity_year = activity_date.year();
 		var activity_month = activity_date.month();
@@ -53,6 +57,8 @@ function loadDividendDetails( o, yr ){
 		return returnTotal / totalNonZero;	    					
 	}
  
+	//console.log('dividends')
+	//console.log(dividends)
 	
     for(key in dividends){   	
     	var rec = dividends[key];
@@ -80,9 +86,17 @@ function loadDividendDetails( o, yr ){
     			}
     			// for all other months we have current year actuals we can use for future projections
     			else{
-    				 
+    				
+    				// for annual dividend payers, current year = prior year same month * 3%
+    				if(rec.divperiod == 9){
+    					// only vwilx rn revisit first thing in 2019!!!!
+    					console.log('annual holding')
+    					console.log(rec);
+    					//thisyeardividends[11].projected = thisyearaverage/nonZero;
+    					thisyeardividends[11].projected = 256.840 * .8065;
+    				}
     				// for monthly payers, each future month is an average of what has been paid this year    				
-    				if(rec.divperiod == 12){
+    				else if(rec.divperiod == 12){
     					
     					var thisyearaverage = 0;
     					var nonZero = 0;
@@ -116,6 +130,9 @@ function loadDividendDetails( o, yr ){
     						else if(rec.divperiod == 3 && $.inArray(i,[2,5,8,11])>0){
     							thisyeardividends[i].projected = lastActual;
     						}
+    						else if(rec.divperiod == 6 && $.inArray(i,[5,11])>0){
+    							thisyeardividends[i].projected = lastActual;
+    						}    						
     						/*
     						 * 	
 	    					if(rec.divperiod == 1){

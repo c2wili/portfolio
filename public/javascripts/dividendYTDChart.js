@@ -12,7 +12,7 @@ function buildYTDChart( o, yr, ytdProjection ){
 		
 		if(activity_year == yr) 
 			cy+=payout;
-		else if(activity_year == yr-1 && activity_month < moment().month()) 
+		else if(activity_year == yr-1 && activity_month <= moment().month()) 
 			py+=payout;
 			
     });
