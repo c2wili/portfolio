@@ -83,18 +83,6 @@ public class REST extends Controller {
     	else if(hnd.equals("deletesingletransaction")){
     		deleteHistory();
     	}
-    	else if(hnd.equals("dividendoverview")){
-    		dividendOverview();
-    	}
-    	else if(hnd.equals("dividenddetails")){
-    		dividendDetails();
-    	}    	    	
-    	else if(hnd.equals("dividendmonthlysummary")){
-    		dividendMonthlySummary();
-    	}
-    	else if(hnd.equals("dividendsectorsummary")){
-    		dividendSectorSummary();
-    	}
     	else if(hnd.equals("sankey")){
     		dividendSankey();
     	}   
@@ -257,7 +245,7 @@ public class REST extends Controller {
 			 "\n FROM portfolio.trades t " +
 			 "\n JOIN portfolio.holdings h " +
 			 "\n   ON t.ticker = h.ticker " +
-			 "\n WHERE t.activity_type = 'dividend' " +
+			 "\n WHERE t.activity_type in ('dividend','lt gain','st gain') " +
 			 "\n   AND t.portfolio_id = ? " +
 			 "\n ORDER BY t.ticker, t.activity_date ";
 	
@@ -325,6 +313,7 @@ public class REST extends Controller {
     	String ticker = (String)requestParams.get("ticker");
     	String activity_type = (String)requestParams.get("activity_type");
     	     	
+    	Logger.info("Remove historical record for " + ticker + ", id: " + id + ", type: " + activity_type );
 		PreparedStatement ps = null;
 		Connection con = null;
 		
@@ -369,29 +358,24 @@ public class REST extends Controller {
 
 			}			
 			// check for a drip entry for this dividend transaction removal
-			else if(activity_type.equals("dividend")){
-
+			else if(activity_type.equals("dividend") || activity_type.equals("lt gain") || activity_type.equals("st gain") ){
+				
+				Logger.info("Remove drip record " + ticker + ", " + activity_type);
+				
 				// remove any possible drip trade
 				String sql = " DELETE FROM portfolio.trades t " +
 						     "\n  WHERE t.ticker = ? " +
 						     "\n  AND t.activity_type = 'drip' " +
 						     "\n  and t.portfolio_id = ? " +
-						     "\n  AND ROUND(price*shares,2) IN (SELECT ROUND(price*shares,2) " + 
-						     "\n                                FROM portfolio.trades td " +
-						     "\n                                WHERE td.activity_type = 'dividend' " +
-						     "\n                                  AND td.ticker = t.ticker " +
-						     "\n                                  AND td.activity_date = t.activity_date " +
-						     "\n                                  AND td.id = ? " +
-						     "\n                                  and td.portfolio_id = t.portfolio_id " +
-						     "\n                               ) ";
+						     "\n  AND t.id = ? ";
 
-				Logger.debug("Removing possible drip record.");
+				 
 				Logger.debug(sql);
 				
 				ps = con.prepareStatement(sql);
 				ps.setString(1, ticker);
 				ps.setInt(2, portfolioId);
-				ps.setInt(3, Integer.parseInt(id));
+				ps.setInt(3, Integer.parseInt(id)+1);
 				ps.executeUpdate();
 				ps.close();
 				
@@ -399,7 +383,7 @@ public class REST extends Controller {
 				sql = " DELETE FROM portfolio.trades " +
 					  "\nWHERE id = ? " +
 					  "\n  AND ticker = ? " +
-				      "\n  AND activity_type = 'dividend' " +
+				      "\n  AND activity_type = ? " +
 				      "\n  and portfolio_id = ? ";
 
 				Logger.debug("Removing dividend paid record.");
@@ -408,7 +392,8 @@ public class REST extends Controller {
 				ps = con.prepareStatement(sql);
 				ps.setInt(1, Integer.parseInt(id));
 				ps.setString(2, ticker);
-				ps.setInt(3, portfolioId);
+				ps.setString(3, activity_type);
+				ps.setInt(4, portfolioId);
 				
 				ps.executeUpdate();
 				
@@ -519,7 +504,7 @@ public class REST extends Controller {
 			String sql = "\n SELECT t.id, t.portfolio_id, t.ticker,t.activity_type, t.activity_date,t.price " +
 			             "\n        ,case when t.activity_type = 'sell' then s.shares else t.shares end as shares " +
 			             "\n        ,COALESCE(CAST(s.basis AS VARCHAR(50)),'----') AS basis " +
-			             "\n        ,CASE WHEN t.activity_type = 'dividend' THEN CAST(t.shares*t.price AS VARCHAR(50)) " +
+			             "\n        ,CASE WHEN t.activity_type in ('dividend','lt gain','st gain') THEN CAST(t.shares*t.price AS VARCHAR(50)) " +
 			             "\n              WHEN t.activity_type = 'sell' THEN CAST(s.gain_loss AS VARCHAR(50)) " +
 			             "\n           ELSE '----' " +
 			             "\n        END AS gainloss " +
@@ -528,7 +513,7 @@ public class REST extends Controller {
                          "\n  ON t.id = s.trades_id " + 
 						 "\nWHERE t.ticker = ? " +
 						 "\n  and t.portfolio_id = ? " +
-						 "\nORDER BY activity_date, activity_type";
+						 "\nORDER BY activity_date, t.id asc";
 			
 			
 			Logger.info(sql);
@@ -656,7 +641,7 @@ public class REST extends Controller {
 						 "\n LEFT OUTER JOIN portfolio.trades d " + 
 						 "\n   ON x.ticker = d.ticker " +
 						 "\n  AND x.portfolio_id = d.portfolio_id " +
-						 "\nAND d.activity_type = 'dividend' " + 
+						 "\nAND d.activity_type in ('dividend','lt gain','st gain') " + 
 						 "\nGROUP BY 1,2,3,4,5,6,7,8  " +						 
 						 "\nORDER BY name";
 			
@@ -1152,498 +1137,6 @@ public class REST extends Controller {
     	renderJSON("{\"success\":true}");
     }
     
-    public static void dividendOverview()throws Exception {
-    	
-    	String yr = (String)requestParams.get("yr");
-    	
-		PreparedStatement ps = null;
-		Connection con = null;
-		ResultSet rs = null;
-	
-		JsonObject jsonRow = new JsonObject();
-		
-		try {
-			con = HikariCP.getConnection();
-			
-			String sql = "\n SELECT PY,CY,PYA,  " +
-				         "\n CASE WHEN EXTRACT(MONTH from NOW()) = 1 THEN 0  " +
-		                 "\n              WHEN EXTRACT(MONTH from NOW()) = 2 THEN CYM1 + (CYM1 * 11) " +
-		                 "\n              WHEN EXTRACT(MONTH from NOW()) = 3 THEN (CYM1 + CYM2) + (CYM1*3) + (CYM2*3) + (((CYM1 + CYM2)/2)*4)  " +
-		                 "\n              WHEN EXTRACT(MONTH from NOW()) = 4 THEN (CYM1 + CYM2 + CYM3) + (CYM1*3) + (CYM2*3) + (CYM3 *3)                     " +
-		                 "\n              WHEN EXTRACT(MONTH from NOW()) = 5 THEN (CYM1 + CYM2 + CYM3 + CYM4) + (((CYM1 + CYM4)/2)*2) + (CYM2*3) + (CYM3 *3)                     " +
-		                 "\n              WHEN EXTRACT(MONTH from NOW()) = 6 THEN (CYM1 + CYM2 + CYM3 + CYM4 + CYM5) + (((CYM1 + CYM4)/2)*2) + (((CYM2 + CYM5)/2)*2) + (CYM3 *3) " +
-		                 "\n              WHEN EXTRACT(MONTH from NOW()) = 7 THEN (CYM1 + CYM2 + CYM3 + CYM4 + CYM5 + CYM6) + (((CYM1 + CYM4)/2)*2) + (((CYM2 + CYM5)/2)*2) + (((CYM3 + CYM6)/2)*2) " +
-		                 "\n              WHEN EXTRACT(MONTH from NOW()) = 8 THEN (CYM1 + CYM2 + CYM3 + CYM4 + CYM5 + CYM6 + CYM7 + ((CYM1 + CYM4 + CYM7)/3)) + (((CYM2 + CYM5)/2)*2) + (((CYM3 + CYM6)/2)*2) " +
-		                 "\n              WHEN EXTRACT(MONTH from NOW()) = 9 THEN (CYM1 + CYM2 + CYM3 + CYM4 + CYM5 + CYM6 + CYM7 + CYM8) + ((CYM1 + CYM4 + CYM7)/3) + ((CYM2 + CYM5 + CYM8)/3) + (((CYM3 + CYM6)/2)*2)  " +
-		                 "\n              WHEN EXTRACT(MONTH from NOW()) = 10 THEN (CYM1 + CYM2 + CYM3 + CYM4 + CYM5 + CYM6 + CYM7 + CYM8 + CYM9) + ((CYM1 + CYM4 + CYM7)/3) + ((CYM2 + CYM5 + CYM8)/3) + ((CYM3 + CYM6 + CYM9)/3) " +
-		                 "\n              WHEN EXTRACT(MONTH from NOW()) = 11 THEN (CYM1 + CYM2 + CYM3 + CYM4 + CYM5 + CYM6 + CYM7 + CYM8 + CYM9 + CYM10) + ((CYM2 + CYM5 + CYM8)/3) + ((CYM3 + CYM6 + CYM9)/3) " +
-		                 "\n              WHEN EXTRACT(MONTH from NOW()) = 12 THEN (CYM1 + CYM2 + CYM3 + CYM4 + CYM5 + CYM6 + CYM7 + CYM8 + CYM9 + CYM10 + CYM11) + ((CYM3 + CYM6 + CYM9)/3) " +
-		                 "\n  END AS CYP  " +
-		                 "\n FROM(  " +
-		                 "\n   SELECT COALESCE(SUM(CASE WHEN EXTRACT(YEAR from d.activity_date) = (EXTRACT(YEAR from NOW())-1) AND  d.activity_date <= NOW() - interval '1 year' THEN d.price*d.shares END),0) AS PY,  " +
-		                 "\n          SUM(CASE WHEN EXTRACT(YEAR from d.activity_date) = EXTRACT(YEAR from NOW()) THEN d.price*d.shares END) AS CY,  " +
-		                 "\n          COALESCE(SUM(CASE WHEN EXTRACT(YEAR from d.activity_date) = (EXTRACT(YEAR from NOW())-1) THEN d.price*d.shares END),0) AS PYA,          " +
-		                 "\n          COALESCE(SUM(CASE WHEN EXTRACT(YEAR from d.activity_date) = EXTRACT(YEAR from NOW()) AND EXTRACT(MONTH from d.activity_date) = 1 THEN d.price*d.shares END),0) AS CYM1,  " +
-		                 "\n          COALESCE(SUM(CASE WHEN EXTRACT(YEAR from d.activity_date) = EXTRACT(YEAR from NOW()) AND EXTRACT(MONTH from d.activity_date) = 2 THEN d.price*d.shares END),0) AS CYM2,  " +
-		                 "\n          COALESCE(SUM(CASE WHEN EXTRACT(YEAR from d.activity_date) = EXTRACT(YEAR from NOW()) AND EXTRACT(MONTH from d.activity_date) = 3 THEN d.price*d.shares END),0) AS CYM3,  " +
-		                 "\n          COALESCE(SUM(CASE WHEN EXTRACT(YEAR from d.activity_date) = EXTRACT(YEAR from NOW()) AND EXTRACT(MONTH from d.activity_date) = 4 THEN d.price*d.shares END),0) AS CYM4,  " +
-		                 "\n          COALESCE(SUM(CASE WHEN EXTRACT(YEAR from d.activity_date) = EXTRACT(YEAR from NOW()) AND EXTRACT(MONTH from d.activity_date) = 5 THEN d.price*d.shares END),0) AS CYM5,  " +
-		                 "\n          COALESCE(SUM(CASE WHEN EXTRACT(YEAR from d.activity_date) = EXTRACT(YEAR from NOW()) AND EXTRACT(MONTH from d.activity_date) = 6 THEN d.price*d.shares END),0) AS CYM6,  " +
-		                 "\n          COALESCE(SUM(CASE WHEN EXTRACT(YEAR from d.activity_date) = EXTRACT(YEAR from NOW()) AND EXTRACT(MONTH from d.activity_date) = 7 THEN d.price*d.shares END),0) AS CYM7,  " +
-		                 "\n          COALESCE(SUM(CASE WHEN EXTRACT(YEAR from d.activity_date) = EXTRACT(YEAR from NOW()) AND EXTRACT(MONTH from d.activity_date) = 8 THEN d.price*d.shares END),0) AS CYM8,  " +
-		                 "\n          COALESCE(SUM(CASE WHEN EXTRACT(YEAR from d.activity_date) = EXTRACT(YEAR from NOW()) AND EXTRACT(MONTH from d.activity_date) = 9 THEN d.price*d.shares END),0) AS CYM9,  " +
-		                 "\n          COALESCE(SUM(CASE WHEN EXTRACT(YEAR from d.activity_date) = EXTRACT(YEAR from NOW()) AND EXTRACT(MONTH from d.activity_date) = 10 THEN d.price*d.shares END),0) AS CYM10,  " +
-		                 "\n          COALESCE(SUM(CASE WHEN EXTRACT(YEAR from d.activity_date) = EXTRACT(YEAR from NOW()) AND EXTRACT(MONTH from d.activity_date) = 11 THEN d.price*d.shares END),0) AS CYM11,  " +
-		                 "\n          COALESCE(SUM(CASE WHEN EXTRACT(YEAR from d.activity_date) = EXTRACT(YEAR from NOW()) AND EXTRACT(MONTH from d.activity_date) = 12 THEN d.price*d.shares END),0) AS CYM12                     " +
-		                 "\n FROM portfolio.trades d  " +
-		                 "\n   WHERE d.activity_type = 'dividend'  " +
-		                 "\n     AND d.portfolio_id = ? " +		                 
-		                 "\n )z ";
-
-
-			
-			Logger.info(sql);
-			
-			ps = con.prepareStatement(sql);
-			ps.setInt(1, portfolioId);
-			 
-			
-			rs = ps.executeQuery();
-			
-			
-			while(rs.next()){
-				String py = rs.getString("PY");
-				String cy = rs.getString("CY");
-				String pya = rs.getString("PYA");
-				String cyp = rs.getString("CYP");
-				
-				jsonRow.addProperty("PY", Double.parseDouble(py));
-				jsonRow.addProperty("CY", Double.parseDouble(cy));
-				jsonRow.addProperty("PYA", Double.parseDouble(pya));
-				jsonRow.addProperty("CYP", Double.parseDouble(cyp));
-			}
-			ps.close();
-			rs.close();
-			
-			
-			String sql2 = "\nSELECT CAST(EXTRACT(MONTH from d.activity_date) AS INTEGER) as mthnum " +
-			              "\n       ,CAST((EXTRACT(YEAR from NOW())-1) AS INTEGER) as pylbl " +
-			              "\n       ,CAST(EXTRACT(YEAR from NOW()) AS INTEGER) as cylbl " +
-					      "\n       ,SUM(CASE WHEN EXTRACT(YEAR from d.activity_date) = (EXTRACT(YEAR from NOW())-1) " +
-					      "\n                 THEN shares*price ELSE 0 END) PYDIV " +
-					      "\n       ,SUM(CASE WHEN EXTRACT(YEAR from d.activity_date) = (EXTRACT(YEAR from NOW())) " +
-					      "\n                 THEN shares*price ELSE 0 END) CYDIV " +                 
-					      "\nFROM portfolio.trades d  " +
-					      "\nWHERE d.activity_type = 'dividend' " + 
-					      "\n  AND d.portfolio_id = ? " +		     
-					      "\n  AND EXTRACT(YEAR from d.activity_date) >= (EXTRACT(YEAR from NOW())-1) " +
-					      "\nGROUP BY 1,2,3   " +
-					      "\nORDER BY 1";
-		
-			Logger.debug(sql2);
-			
-			ps = con.prepareStatement(sql2);
-			ps.setInt(1, portfolioId);
-			
-			rs = ps.executeQuery();
-			
-			String [] pydiv = new String [12];
-			String [] cydiv = new String [12];
-			String pylbl = "";
-			String cylbl = "";
-			
-			while(rs.next()){
-				int m = rs.getInt("mthnum");
-				String py = rs.getString("PYDIV");
-				String cy = rs.getString("CYDIV");
-				pylbl = rs.getString("pylbl");
-				cylbl = rs.getString("cylbl");
-			
-				pydiv[m-1] = py;
-				cydiv[m-1] = cy;
-			}
-			ps.close();	
-			rs.close();
-			
-			jsonRow.addProperty("PYLABEL", pylbl);
-			jsonRow.addProperty("CYLABEL", cylbl);
-			jsonRow.addProperty("PYMONTHLY", StringUtils.join(pydiv,","));
-			jsonRow.addProperty("CYMONTHLY", StringUtils.join(cydiv,","));
-			
-			
-			renderJSON(jsonRow);
-			
-	    	//renderJSON("{\"PY\":50, \"CY\": 80,\"PYA\":800, \"CYP\": 2000 }");
-	    
-		
-		} 
-		catch (Exception e) {
-			Logger.error("dividendOverview caught exception " + e.getMessage());
-			throw new Exception("ERROR: dividendOverview() " + e.getMessage());  
-		} 
-		finally {
-			
-			try {				
-				rs.close();
-				ps.close();
-				HikariCP.close();
-				
-				// use the Play connection close method !important
-				if(!con.isClosed()) con.close();
-			} catch (SQLException e) {
-				Logger.error("dividendOverview: Error closing connection " + e.getMessage());
-			} 
-		}
-    	
-    }
-    
-    public static void dividendDetails()throws Exception {
-    	
-    	String yr = (String)requestParams.get("yr");
-    	
- 		PreparedStatement ps = null;
- 		Connection con = null;
- 		ResultSet rs = null;
- 	
- 		JsonArray  jsonRows = new JsonArray();
- 		
- 		try {
- 			con = HikariCP.getConnection();
- 			
- 			String sql = "\n select * from (" +
- 					     "\n SELECT h.ticker, h.divperiod " +
- 					     "\n       ,SUM(CASE WHEN EXTRACT(MONTH FROM D.ACTIVITY_DATE) = 1 THEN SHARES*PRICE ELSE 0 END) AS jan " +
- 					     "\n      ,SUM(CASE WHEN EXTRACT(MONTH FROM D.ACTIVITY_DATE) = 2 THEN SHARES*PRICE ELSE 0 END) AS feb " +
- 					     "\n      ,SUM(CASE WHEN EXTRACT(MONTH FROM D.ACTIVITY_DATE) = 3 THEN SHARES*PRICE ELSE 0 END) AS mar " +
- 					     "\n      ,SUM(CASE WHEN EXTRACT(MONTH FROM D.ACTIVITY_DATE) = 4 THEN SHARES*PRICE ELSE 0 END) AS apr " +
- 					     "\n      ,SUM(CASE WHEN EXTRACT(MONTH FROM D.ACTIVITY_DATE) = 5 THEN SHARES*PRICE ELSE 0 END) AS may " +
- 					     "\n      ,SUM(CASE WHEN EXTRACT(MONTH FROM D.ACTIVITY_DATE) = 6 THEN SHARES*PRICE ELSE 0 END) AS jun " +
- 					     "\n      ,SUM(CASE WHEN EXTRACT(MONTH FROM D.ACTIVITY_DATE) = 7 THEN SHARES*PRICE ELSE 0 END) AS jul " +
- 					     "\n      ,SUM(CASE WHEN EXTRACT(MONTH FROM D.ACTIVITY_DATE) = 8 THEN SHARES*PRICE ELSE 0 END) AS aug " +
- 					     "\n      ,SUM(CASE WHEN EXTRACT(MONTH FROM D.ACTIVITY_DATE) = 9 THEN SHARES*PRICE ELSE 0 END) AS sep " +
- 					     "\n      ,SUM(CASE WHEN EXTRACT(MONTH FROM D.ACTIVITY_DATE) = 10 THEN SHARES*PRICE ELSE 0 END) AS oct " +
- 					     "\n      ,SUM(CASE WHEN EXTRACT(MONTH FROM D.ACTIVITY_DATE) = 11 THEN SHARES*PRICE ELSE 0 END) AS nov " +
- 					     "\n      ,SUM(CASE WHEN EXTRACT(MONTH FROM D.ACTIVITY_DATE) = 12 THEN SHARES*PRICE ELSE 0 END) AS dec " +
- 					     "\n      ,SUM(CASE WHEN EXTRACT(MONTH FROM D.ACTIVITY_DATE) <=3 THEN SHARES*PRICE ELSE 0 END) AS q1 " +
- 					     "\n      ,SUM(CASE WHEN EXTRACT(MONTH FROM D.ACTIVITY_DATE) BETWEEN 4 AND 6 THEN SHARES*PRICE ELSE 0 END) AS q2 " +
- 					     "\n      ,SUM(CASE WHEN EXTRACT(MONTH FROM D.ACTIVITY_DATE) BETWEEN 7 AND 9 THEN SHARES*PRICE ELSE 0 END) AS q3 " +
- 					     "\n      ,SUM(CASE WHEN EXTRACT(MONTH FROM D.ACTIVITY_DATE) BETWEEN 10 AND 12 THEN SHARES*PRICE ELSE 0 END) AS q4 " +
- 					     "\n      ,SUM(shares*price) AS ytd " +
- 					     "\nFROM portfolio.holdings h  " +
- 					     "\nLEFT OUTER JOIN portfolio.trades d " +
- 					     "\n  ON d.ticker = h.ticker " +
- 					     "\n AND d.portfolio_id = h.portfolio_id " +
- 					     "\n AND d.activity_type = 'dividend' " + 
- 					     "\n AND EXTRACT(YEAR from d.activity_date) =  ?" + 
- 					     "\nWHERE h.portfolio_id = ? " +
- 					     "\n and h.divperiod > 0 " +
- 					     "\nGROUP BY 1,2   " +
- 					     "\n UNION ALL " +
-					     "\n SELECT 'Totals' as ticker, 12 as divperiod " +
- 					     "\n       ,SUM(CASE WHEN EXTRACT(MONTH FROM D.ACTIVITY_DATE) = 1 THEN SHARES*PRICE ELSE 0 END) AS jan " +
- 					     "\n      ,SUM(CASE WHEN EXTRACT(MONTH FROM D.ACTIVITY_DATE) = 2 THEN SHARES*PRICE ELSE 0 END) AS feb " +
- 					     "\n      ,SUM(CASE WHEN EXTRACT(MONTH FROM D.ACTIVITY_DATE) = 3 THEN SHARES*PRICE ELSE 0 END) AS mar " +
- 					     "\n      ,SUM(CASE WHEN EXTRACT(MONTH FROM D.ACTIVITY_DATE) = 4 THEN SHARES*PRICE ELSE 0 END) AS apr " +
- 					     "\n      ,SUM(CASE WHEN EXTRACT(MONTH FROM D.ACTIVITY_DATE) = 5 THEN SHARES*PRICE ELSE 0 END) AS may " +
- 					     "\n      ,SUM(CASE WHEN EXTRACT(MONTH FROM D.ACTIVITY_DATE) = 6 THEN SHARES*PRICE ELSE 0 END) AS jun " +
- 					     "\n      ,SUM(CASE WHEN EXTRACT(MONTH FROM D.ACTIVITY_DATE) = 7 THEN SHARES*PRICE ELSE 0 END) AS jul " +
- 					     "\n      ,SUM(CASE WHEN EXTRACT(MONTH FROM D.ACTIVITY_DATE) = 8 THEN SHARES*PRICE ELSE 0 END) AS aug " +
- 					     "\n      ,SUM(CASE WHEN EXTRACT(MONTH FROM D.ACTIVITY_DATE) = 9 THEN SHARES*PRICE ELSE 0 END) AS sep " +
- 					     "\n      ,SUM(CASE WHEN EXTRACT(MONTH FROM D.ACTIVITY_DATE) = 10 THEN SHARES*PRICE ELSE 0 END) AS oct " +
- 					     "\n      ,SUM(CASE WHEN EXTRACT(MONTH FROM D.ACTIVITY_DATE) = 11 THEN SHARES*PRICE ELSE 0 END) AS nov " +
- 					     "\n      ,SUM(CASE WHEN EXTRACT(MONTH FROM D.ACTIVITY_DATE) = 12 THEN SHARES*PRICE ELSE 0 END) AS dec " +
- 					     "\n      ,SUM(CASE WHEN EXTRACT(MONTH FROM D.ACTIVITY_DATE) <=3 THEN SHARES*PRICE ELSE 0 END) AS q1 " +
- 					     "\n      ,SUM(CASE WHEN EXTRACT(MONTH FROM D.ACTIVITY_DATE) BETWEEN 4 AND 6 THEN SHARES*PRICE ELSE 0 END) AS q2 " +
- 					     "\n      ,SUM(CASE WHEN EXTRACT(MONTH FROM D.ACTIVITY_DATE) BETWEEN 7 AND 9 THEN SHARES*PRICE ELSE 0 END) AS q3 " +
- 					     "\n      ,SUM(CASE WHEN EXTRACT(MONTH FROM D.ACTIVITY_DATE) BETWEEN 10 AND 12 THEN SHARES*PRICE ELSE 0 END) AS q4 " +
- 					     "\n      ,SUM(shares*price) AS ytd " +
- 					     "\nFROM portfolio.holdings h  " +
- 					     "\nLEFT OUTER JOIN portfolio.trades d " +
- 					     "\n  ON d.ticker = h.ticker " +
- 					     "\n AND d.portfolio_id = h.portfolio_id " +
- 					     "\n AND d.activity_type = 'dividend' " + 
- 					     "\n AND EXTRACT(YEAR from d.activity_date) =  ?" + 
- 					     "\nWHERE h.portfolio_id = ? " +
- 					     "\n and h.divperiod > 0 " +
- 					     "\nGROUP BY 1,2   " +
- 					     "\n)z " +
- 					     "\nORDER BY CASE WHEN ticker='Totals' then 1 else 0 end, DIVPERIOD";
- 			
- 			Logger.info(sql);
-
- 			ps = con.prepareStatement(sql); 		
- 			ps.setInt(1, Integer.parseInt(yr));
- 			ps.setInt(2, portfolioId);
- 			ps.setInt(3, Integer.parseInt(yr));
- 			ps.setInt(4, portfolioId);
- 			
- 			rs = ps.executeQuery();
- 			 			
-			ResultSetMetaData rsMD = rs.getMetaData();
-			int colCount = rsMD.getColumnCount();
-			
-			DateTime dt = new DateTime(new Date());
-			int currentMonth = dt.getMonthOfYear();
-			
-			while(rs.next()){
-				JsonObject jsonRow = new JsonObject();
-				
-				for (int c = 1; c <= colCount; c++) {
-					String colHeader = rsMD.getColumnName(c);
-					
-					String colVal = "";
-
-					try {
-						colVal = rs.getString(colHeader).trim();
-					} catch (Exception e) {
-						colVal = rs.getString(colHeader);
-					}
-					if (colVal == null)
-						colVal = "";
-					
-					if(colVal.equals("")){
-						jsonRow.addProperty(colHeader, "");
-					}
-					else if(StringUtils.isNumeric(colVal)){
-						jsonRow.addProperty(colHeader, Integer.parseInt(colVal));
-					}
-					else if(StringUtils.isNumeric(colVal.replaceAll("\\.","")) && StringUtils.countMatches(colVal,".") <= 1 ){
-						jsonRow.addProperty(colHeader, Double.parseDouble(colVal));						
-					}
-					else{
-						jsonRow.addProperty(colHeader, colVal);
-					}
-				}
-				
-				// add row to returning result set
-				jsonRows.add(jsonRow);				
-			}
-			ps.close();
- 			rs.close();
- 			
- 			
-			renderJSON(jsonRows);
- 		 
- 		} 
- 		catch (Exception e) {
- 			Logger.error("dividendOverview caught exception " + e.getMessage());
- 			throw new Exception("ERROR: dividendOverview() " + e.getMessage());  
- 		} 
- 		finally {
- 			
- 			try {				
- 				rs.close();
- 				ps.close();
- 				HikariCP.close();
- 				
- 				// use the Play connection close method !important
- 				if(!con.isClosed()) con.close();
- 			} catch (SQLException e) {
- 				Logger.error("dividendOverview: Error closing connection " + e.getMessage());
- 			} 
- 		}
-     	
-     }    
-    
-    public static void dividendMonthlySummary() throws Exception {
-    	 
-    	String yr = (String)requestParams.get("yr");
-    	
-		PreparedStatement ps = null;
-		Connection con = null;
-		ResultSet rs = null;
-	
-		JsonArray  jsonRows = new JsonArray();
-		
-		try {
-			con = HikariCP.getConnection();
-			
-			String sql = "\n SELECT *, " +
-					     "\n        CASE WHEN py = 0 OR cy = 0 THEN 0 " +
-					     "\n           ELSE ((cy - py)/py)*100 " +
-					     "\n        END AS chg " +
-					     "\n FROM( " +
-					     "\n   SELECT CAST(TO_CHAR(activity_date, 'month') AS CHARACTER(20)) MTH " +
-					     "\n          ,CAST(EXTRACT(MONTH FROM ACTIVITY_DATE) AS INTEGER) MTHNUM " +
-					     "\n          ,SUM(CASE WHEN EXTRACT(YEAR from activity_date) = " + (Integer.parseInt(yr)-1) + " THEN SHARES*PRICE ELSE 0 END) py " +
-					     "\n          ,SUM(CASE WHEN EXTRACT(YEAR from activity_date) = " + (Integer.parseInt(yr)) + " THEN SHARES*PRICE ELSE 0 END) cy " +
-					     "\n   FROM portfolio.trades " +
-					     "\n   WHERE portfolio_id = ? " +
-					     "\n     AND activity_type = 'dividend' " +
-					     "\n     AND EXTRACT(YEAR from activity_date) IN (?,?) " +
-					     "\n GROUP BY 1,2   " +
-					     "\n )Z " +
-					     "\n ORDER BY mthnum";
-			
-			
-			Logger.debug(sql);
-						
-			ps = con.prepareStatement(sql);
-			ps.setInt(1, portfolioId);
-			ps.setInt(2, Integer.parseInt(yr)-1);
-			ps.setInt(3, Integer.parseInt(yr));
-			
-			rs = ps.executeQuery();
-			
-			ResultSetMetaData rsMD = rs.getMetaData();
-			int colCount = rsMD.getColumnCount();
-			
-			while(rs.next()){
-				JsonObject jsonRow = new JsonObject();
-				
-				for (int c = 1; c <= colCount; c++) {
-					String colHeader = rsMD.getColumnName(c);
-					
-					String colVal = "";
-
-					try {
-						colVal = rs.getString(colHeader).trim();
-					} catch (Exception e) {
-						colVal = rs.getString(colHeader);
-					}
-					if (colVal == null)
-						colVal = "";
-					
-					if(colVal.equals("")){
-						jsonRow.addProperty(colHeader, "");
-					}
-					else if(StringUtils.isNumeric(colVal)){
-						jsonRow.addProperty(colHeader, Integer.parseInt(colVal));
-					}
-					else if(StringUtils.isNumeric(colVal.replaceAll("\\.","")) && StringUtils.countMatches(colVal,".") <= 1 ){
-						jsonRow.addProperty(colHeader, Double.parseDouble(colVal));						
-					}
-					else{
-						jsonRow.addProperty(colHeader, colVal);
-					}
-				}
-
-				// add row to returning result set
-				jsonRows.add(jsonRow);				
-			}
-			
-			renderJSON(jsonRows);
-		
-		} 
-		catch (Exception e) {
-			Logger.error("getHistory caught exception " + e.getMessage());
-			throw new Exception("ERROR: getHistory() " + e.getMessage());  
-		} 
-		finally {
-			
-			try {				
-				rs.close();
-				ps.close();
-				HikariCP.close();
-				
-				// use the Play connection close method !important
-				if(!con.isClosed()) con.close();
-			} catch (SQLException e) {
-				Logger.error("getHistory: Error closing connection " + e.getMessage());
-			} 
-		}
-    	   	
-    }
-    
-    public static void dividendSectorSummary() throws Exception {
-   	 
-    	String yr = (String)requestParams.get("yr");
-    	
-		PreparedStatement ps = null;
-		Connection con = null;
-		ResultSet rs = null;
-	
-		JsonArray  jsonRows = new JsonArray();
-		
-		try {
-			con = HikariCP.getConnection();
-			
-			String sql = "\n SELECT * " +
-			             "\n        ,(amount / SUM(amount) over () ) *100 AS pct " +
-					     "\n FROM( " +
-					     "\n   SELECT sector " +
-					     "\n          ,SUM(SHARES*PRICE ) as amount " +
-					     "\n   FROM portfolio.trades t " +
-					     "\n   join portfolio.holdings h " +
-					     "\n     on t.portfolio_id = h.portfolio_id " +
-					     "\n    and t.ticker = h.ticker " + 
-					     "\n   WHERE t.portfolio_id = ? " +
-					     "\n     AND t.activity_type = 'dividend' " +
-					     "\n     AND EXTRACT(YEAR from t.activity_date) = ? " +
-					     "\n GROUP BY 1 " +
-					     "\n )Z " +
-					     "\n ORDER BY sector";
-			
-			
-			Logger.debug(sql);
-			
-			
-			ps = con.prepareStatement(sql);
-			ps.setInt(1, portfolioId);
-			ps.setInt(2, Integer.parseInt(yr));
-			
-			rs = ps.executeQuery();
-			
-			ResultSetMetaData rsMD = rs.getMetaData();
-			int colCount = rsMD.getColumnCount();
-			
-			while(rs.next()){
-				JsonObject jsonRow = new JsonObject();
-				
-				for (int c = 1; c <= colCount; c++) {
-					String colHeader = rsMD.getColumnName(c);
-					
-					String colVal = "";
-
-					try {
-						colVal = rs.getString(colHeader).trim();
-					} catch (Exception e) {
-						colVal = rs.getString(colHeader);
-					}
-					if (colVal == null)
-						colVal = "";
-					
-					if(colVal.equals("")){
-						jsonRow.addProperty(colHeader, "");
-					}
-					else if(StringUtils.isNumeric(colVal)){
-						jsonRow.addProperty(colHeader, Integer.parseInt(colVal));
-					}
-					else if(StringUtils.isNumeric(colVal.replaceAll("\\.","")) && StringUtils.countMatches(colVal,".") <= 1 ){
-						jsonRow.addProperty(colHeader, Double.parseDouble(colVal));						
-					}
-					else{
-						jsonRow.addProperty(colHeader, colVal);
-					}
-				}
-
-				// add row to returning result set
-				jsonRows.add(jsonRow);				
-			}
-			
-			renderJSON(jsonRows);
-		
-		} 
-		catch (Exception e) {
-			Logger.error("dividendSectorSummary caught exception " + e.getMessage());
-			throw new Exception("ERROR: dividendSectorSummary() " + e.getMessage());  
-		} 
-		finally {
-			
-			try {				
-				rs.close();
-				ps.close();
-				HikariCP.close();
-				
-				// use the Play connection close method !important
-				if(!con.isClosed()) con.close();
-			} catch (SQLException e) {
-				Logger.error("dividendSectorSummary: Error closing connection " + e.getMessage());
-			} 
-		}
-    	   	
-    }    
-    
     public static void dividendSankey() throws Exception {
       	 
     	String yr = (String)requestParams.get("yr");
@@ -1665,7 +1158,7 @@ public class REST extends Controller {
 					     "\n                   FROM portfolio.trades " +
 					     "\n                   WHERE portfolio_id = ? " +
 					     "\n                     and extract(year from activity_date) = ? " +
-					     "\n                     and activity_type = 'dividend') " +					     
+					     "\n                     and activity_type in ('dividend','lt gain','st gain')) " +					     
 					     "\n  GROUP BY 1,2 " +
 					     "\n  UNION ALL  " +
 					     "\n  SELECT 0 AS indx, ticker as nodes " +
@@ -1675,7 +1168,7 @@ public class REST extends Controller {
 					     "\n                   FROM portfolio.trades " +
 					     "\n                   WHERE portfolio_id = ? " +
 					     "\n                     and extract(year from activity_date) = ? " +
-					     "\n                     and activity_type = 'dividend') " +
+					     "\n                     and activity_type in ('dividend','lt gain','st gain')) " +
 					     "\n  GROUP BY 1,2 " +
 					     "\n  UNION ALL  " +
 					     "\n  SELECT 3 AS indx, 'Dividends' AS nodes " +					     
@@ -1722,7 +1215,7 @@ public class REST extends Controller {
 				  "\n  AND h.ticker = t.ticker " +
 				  "\n WHERE h.portfolio_id = ? " +
 				  "\n   AND EXTRACT(YEAR from activity_date) = ? " +
-				  "\n   AND t.activity_type='dividend' " +
+				  "\n   AND t.activity_type in ('dividend','lt gain','st gain') " +
 				  "\n GROUP BY 1,2,3 " +
 				  "\n UNION ALL  " +
 				  "\n SELECT 1 AS indx, sector AS src, 'Dividends' AS tgt " +
@@ -1733,7 +1226,7 @@ public class REST extends Controller {
 				  "\n  AND h.ticker = t.ticker " +
 				  "\n WHERE h.portfolio_id = ? " +
 				  "\n   AND EXTRACT(YEAR from activity_date) = ? " +
-				  "\n   AND t.activity_type='dividend' " +
+				  "\n   AND t.activity_type in ('dividend','lt gain','st gain') " +
 				  "\n GROUP BY 1,2,3 " +
 				  "\n )z " +
 				  "\n WHERE DIVS>0 " + 
