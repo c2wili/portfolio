@@ -9,16 +9,29 @@ function buildYTDChart( o, yr, ytdProjection ){
 		var activity_month = activity_date.month();
 		
 		var payout = rec.shares*rec.price;
-		
-		if(activity_year == yr) 
-			cy+=payout;
-		else if(activity_year == yr-1 && activity_month <= moment().month()) 
-			py+=payout;
+ 		
+		if(yr < moment().format("YYYY")){
+			if(activity_year == yr){
+				console.log('adding cy ' + rec.ticker + ": "  +rec.activity_date + ", " + payout)
+				cy+=payout;
+		}
+			else if(activity_year == yr-1){
+				
+				py+=payout;	
+			}
+		}
+		else{
+			if(activity_year == yr) 
+				cy+=payout;
+			else if(activity_year == yr-1 && activity_month <= moment().month()) 
+				py+=payout;
+		}
 			
     });
 	
 	var data = {pylabel: yr-1, cylabel: yr, cy:cy, py:py}
-    
+	var ymax = Math.max(ytdProjection.cy, ytdProjection.py)
+	 
 	Highcharts.chart('ytd-dividend-chart', {
 		 chart: {
                type:'column',
@@ -50,7 +63,7 @@ function buildYTDChart( o, yr, ytdProjection ){
              crosshair: true
          },
 	     yAxis: [{
-	       max: ytdProjection,
+	       max: ymax,
 		   tickInterval: 100,
 		   title: {
 		       text: null

@@ -12,9 +12,9 @@ function buildProjectedChart( o, yr, ytdProjection ){
 			py+=payout;
 			
     });
-	
-	var data = {pylabel: yr-1, cylabel: yr, cy:ytdProjection, py:py}
-    
+ 
+	var data = {pylabel: yr-1, cylabel: yr, cy:ytdProjection.cy, py:ytdProjection.py}
+    var ymax = Math.max(ytdProjection.cy, ytdProjection.py)
 	Highcharts.chart('proj-dividend-chart', {
 		 chart: {
              type:'column',
@@ -45,7 +45,7 @@ function buildProjectedChart( o, yr, ytdProjection ){
             crosshair: true
         },
 	     yAxis: [{
-	       max: ytdProjection,
+	       max: ymax,
 	       tickInterval: 100,
 		   opposite: true,
 		   title: {

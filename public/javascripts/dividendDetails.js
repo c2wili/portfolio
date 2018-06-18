@@ -1,6 +1,6 @@
 function loadDividendDetails( o, yr ){
 	
-
+console.log("YEAR: " + yr)
 	var dividends = [];
 	var tickers = [];
 
@@ -18,10 +18,14 @@ function loadDividendDetails( o, yr ){
     		return false;
     	}
     });
-    if(retire)o.push({ticker: 'VWILX', activity_date: '2017-01-01', sector:'Mutual Fund',divperiod:9,price:0,shares:0})
+    if(retire){
+    	o.push({ticker: 'VWILX', activity_date: '2017-01-01', sector:'Mutual Fund',divperiod:9,price:0,shares:0})
+    	o.push({ticker: 'VWILX', activity_date: '2016-01-01', sector:'Mutual Fund',divperiod:9,price:0,shares:0})
+    }
+    
  	
     $.each(o, function(index, rec){   	
-    console.log(rec)	
+
     	var activity_date = moment(rec.activity_date);
 		var activity_year = activity_date.year();
 		var activity_month = activity_date.month();
@@ -36,13 +40,14 @@ function loadDividendDetails( o, yr ){
 		if(dividends[rec.ticker] == null){
 			dividends[rec.ticker] = tmpO;
 			tickers.push(rec.ticker);
-		}else{
+		}
+		else{
 			tmpO=dividends[rec.ticker];
 	    }
 
 		// set the current year actual dividends paid
 		if(tmpO.details[activity_year] == null) tmpO.details[activity_year] = JSON.parse(JSON.stringify(oDividend));	    			
-		tmpO.details[activity_year][activity_month].actual = payout;
+		tmpO.details[activity_year][activity_month].actual+= payout;
 		tmpO.details[activity_year][activity_month].paid = true;		
     });
     
@@ -65,14 +70,14 @@ function loadDividendDetails( o, yr ){
 	}
  
 	//console.log('dividends')
-	//console.log(dividends)
+	console.log(dividends)
 	
     for(key in dividends){   	
     	var rec = dividends[key];
     	    	
     	var yearlydetails = rec.details;    	
     	for(year in yearlydetails){
-
+//console.log(rec.ticker + ", " + year)
     		// fill in the prior year values.
     		if(yearlydetails[year-1]){
     			for(i=0;i<12;i++){
@@ -85,8 +90,14 @@ function loadDividendDetails( o, yr ){
     			
     			var thisyeardividends = yearlydetails[year]
     			
+    			//if we are looking at prior year data, no projections
+    			if( yr < moment().format("YYYY") ){
+    				for(i=0;i<12;i++){
+        				thisyeardividends[i].projected = 0;
+        			} 
+    			}
     			// if this is january, current year projections are = same period prior year * 3% if available other wise remain 0.
-    			if( moment().month() == 0 ){
+    			else if( moment().month() == 0 ){
         			for(i=0;i<12;i++){
         				thisyeardividends[i].projected = thisyeardividends[i].prioryear*1.03;
         			}    				
@@ -353,7 +364,7 @@ function loadDividendDetails( o, yr ){
     for(key in dividends){
     	
     	var rec = dividends[key];
-    	
+    	 
     	var qtd=0;
 		var ytd=rec.details[yr].reduce(function(total,amount,index){ return total + amount; });
 		var obj = {ticker: rec.ticker, divperiod: rec.divperiod}
@@ -379,7 +390,7 @@ function loadDividendDetails( o, yr ){
 		data.push(obj);
 		 
     }
-    
+    console.log("DATA");
     console.log(data);
     console.log("***");
  
@@ -529,13 +540,15 @@ function loadDividendDetails( o, yr ){
 	 	    }
      });
  	
- 	var ytdProjection = 0;
+ 	var cyProjection = 0;
+ 	var pyActual = 0;
  	for(key in dividends){
  		for(i=0;i<12;i++){
- 			ytdProjection+= dividends[key].details[yr][i].actual + dividends[key].details[yr][i].projected;
+ 			cyProjection+= dividends[key].details[yr][i].actual + dividends[key].details[yr][i].projected;
+ 			pyActual+= dividends[key].details[yr-1][i].actual;
  		}
  	}
  
  	
- 	return ytdProjection;
+ 	return {cy: cyProjection, py: pyActual};
 }

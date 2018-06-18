@@ -32,7 +32,8 @@ function buildMonthlyComparison( o, yr ){
 			change = ((monthlyTotals.cy[i]-monthlyTotals.py[i]) / monthlyTotals.py[i]) * 100;
 		
 		ytd.cy+=monthlyTotals.cy[i]
-		if(i <= moment().month()) ytd.py+=monthlyTotals.py[i];
+		if(yr < moment().format("YYYY")) ytd.py+=monthlyTotals.py[i];
+		else if(i <= moment().month()) ytd.py+=monthlyTotals.py[i];
 		
 		var o = {mth:monthfull[i], mthnum:i+1, cy:monthlyTotals.cy[i], py:monthlyTotals.py[i],chg:change}
 		monthcompare.push(o);

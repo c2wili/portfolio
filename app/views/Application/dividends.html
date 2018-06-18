@@ -17,9 +17,9 @@
     #{script 'highcharts-6.0.7.js' /}
     #{script 'highcharts-sankey.js' /}
     
+    #{script 'dividendDetails.js' /}
     #{script 'dividendYTDChart.js' /}
-    #{script 'dividendYearlyProjectionChart.js' /}
-    #{script 'dividendMonthlyDetails.js' /}
+    #{script 'dividendYearlyProjectionChart.js' /}    
     #{script 'dividendMonthlyChart.js' /}
     #{script 'dividendMonthlyComparison.js' /}
     #{script 'dividendSectorSummary.js' /}
@@ -109,12 +109,28 @@
           -->
         </div>
       </li> 
+       <div class=" mt-2 mt-md-0">
+      <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          Change Year
+        </a>
+        <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+          <a class="dropdown-item" href="javascript:switchYears(2018);">2018</a>
+          <a class="dropdown-item" href="javascript:switchYears(2017);">2017</a>
+          <!-- <div class="dropdown-divider"></div>
+          <a class="dropdown-item" href="#">Something else here</a>
+          -->
+        </div>
+      </li>
+      </div>
     </ul>
+   </div>
   </div>
 </nav>
 </div><!-- container -->
   
 <div class="container">
+
   <div class="row">
     <div class="col-sm-6 col-md-3">  
       <div id="ytd-dividend-chart"></div>
@@ -223,6 +239,7 @@
         }); //end .ready
         
         function loadPage(){
+            console.clear();
             
             $.getJSON( "rest?hnd=getdividends", function( resp ) {
                 var ytdProjection = loadDividendDetails(resp, yr);
@@ -243,6 +260,11 @@
             $.getJSON( "rest?hnd=swapportfolio&v=" + id, function( data ) {
                 loadPage();
             });            
+        }
+        
+        function switchYears(newYear){
+        	yr = newYear;
+        	loadPage();
         }
     </script>
     
