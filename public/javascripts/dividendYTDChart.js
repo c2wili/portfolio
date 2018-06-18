@@ -21,7 +21,8 @@ function buildYTDChart( o, yr, ytdProjection ){
     
 	Highcharts.chart('ytd-dividend-chart', {
 		 chart: {
-               type:'column'
+               type:'column',
+            backgroundColor: '#f2f2f2'
 		 },
          title: {
              text: ''

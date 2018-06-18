@@ -21,7 +21,8 @@ function buildMonthlyChart( o, yr ){
     
 	Highcharts.chart('monthly-dividend-chart', {
 		 chart: {
-             type:'column'
+             type:'column',
+             backgroundColor: '#f2f2f2'
 		 },
          title: {
              text: ''

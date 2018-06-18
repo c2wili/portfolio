@@ -15,8 +15,7 @@
     #{script 'bootstrap-datepicker.min.js' /}
     #{script 'moment-2.15.1.min.js' /}
     #{script 'highcharts-6.0.7.js' /}
-    #{script 'd3.v3.js' /}
-    #{script 'sankey.js' /}
+    #{script 'highcharts-sankey.js' /}
     
     #{script 'dividendYTDChart.js' /}
     #{script 'dividendYearlyProjectionChart.js' /}
@@ -24,6 +23,7 @@
     #{script 'dividendMonthlyChart.js' /}
     #{script 'dividendMonthlyComparison.js' /}
     #{script 'dividendSectorSummary.js' /}
+    #{script 'dividendSankeyChart.js' /}
     
     
     <link rel="stylesheet" type="text/css" href="/public/javascripts/bootstrap-4.0.0/css/bootstrap.min.css" ></link>
@@ -33,6 +33,7 @@
     
     
     <style>
+    body {background-color:#f2f2f2;}
     .modal-title{white-space: nowrap;}
     #ytd-dividend-chart{height:250px; width:100%;}
     #proj-dividend-chart{height:250px; width:100%;}
@@ -203,7 +204,8 @@
       </table>
     </div>    
     <div class="col-md-12 col-lg-6"> 
-      <p id="sankey-chart"> </p>
+      <!--  <p id="sankey-chart"> </p>-->
+      <div id="sankey-chart"></div>
     </div>               
   </div><!-- row -->  
 </div><!-- container -->
@@ -231,7 +233,8 @@
                 buildMonthlyComparison(resp, yr)                
                 buildSectorSummary(resp, yr)
     
-                buildSankey(yr);
+                //buildSankey(yr);
+                buildSankeyChart(resp, yr);
             });
         }
            
