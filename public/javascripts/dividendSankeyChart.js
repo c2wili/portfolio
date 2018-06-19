@@ -46,7 +46,7 @@ function buildSankeyChart( o, yr ){
         },
         plotOptions:{
         	series:{
-        		colors: [ '#058DC7', '#ED561B', '#7a572a', '#24CBE5', '#64E572', '#FF9655', '#027c04', '#6AF9C4'],
+        		colors: [ '#00e5b5', '#00dcb6', '#01d3b8', '#01caba', '#02c1bc', '#02b9be', '#03b0bf', '#03a7c1', '#049ec3', '#0495c5', '#058dc7'],
         		dataLabels:{
         			color: '#000000',
         			borderColor: '#000000'
