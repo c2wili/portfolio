@@ -10,18 +10,23 @@ console.log("YEAR: " + yr)
 		oDividend.push({actual:0, projected:0, prioryear:0, paid:false});
 	}
 	
-	//dummy record for 2018
-	//remove all vwilx code in 2019!!!!!!!!!!!
+    /* *********************************************************** */
+    /* ************* remove in 2019 ****************************** */
+    /* *********************************************************** */
     $.each(o, function(index, rec){
     	if(rec.ticker == 'VWENX'){
     		retire = true;
     		return false;
     	}
     });
-    if(retire){
+    if(retire && moment().format("YYYY") == 2018){
+    	o.push({ticker: 'VIEIX', activity_date: '2017-01-01', sector:'Mutual Fund',divperiod:3,price:0,shares:0})
     	o.push({ticker: 'VWILX', activity_date: '2017-01-01', sector:'Mutual Fund',divperiod:9,price:0,shares:0})
-    	o.push({ticker: 'VWILX', activity_date: '2016-01-01', sector:'Mutual Fund',divperiod:9,price:0,shares:0})
+    	o.push({ticker: 'VWILX', activity_date: '2016-01-01', sector:'Mutual Fund',divperiod:9,price:0,shares:0})    	
     }
+    /* *********************************************************** */
+    /* *********************************************************** */
+    /* *********************************************************** */
     
  	
     $.each(o, function(index, rec){   	
@@ -48,11 +53,15 @@ console.log("YEAR: " + yr)
 		// set the current year actual dividends paid
 		if(tmpO.details[activity_year] == null) tmpO.details[activity_year] = JSON.parse(JSON.stringify(oDividend));	    			
 		tmpO.details[activity_year][activity_month].actual+= payout;
-		tmpO.details[activity_year][activity_month].paid = true;		
+		tmpO.details[activity_year][activity_month].paid = true;	
+		tmpO.details[activity_year][activity_month].amount = rec.price
+		tmpO.details[activity_year][activity_month].shares = rec.shares
     });
     
     
     console.log("***");
+    console.log(dividends)
+    
     // function to build projection for the month
 	function buildProjection(list){
 		
@@ -68,9 +77,6 @@ console.log("YEAR: " + yr)
 		
 		return returnTotal / totalNonZero;	    					
 	}
- 
-	//console.log('dividends')
-	console.log(dividends)
 	
     for(key in dividends){   	
     	var rec = dividends[key];
@@ -105,16 +111,36 @@ console.log("YEAR: " + yr)
     			// for all other months we have current year actuals we can use for future projections
     			else{
     				
-    				// for annual dividend payers, current year = prior year same month * 3%
-    				if(rec.divperiod == 9){
+    				if(rec.ticker == 'VWILX' && moment().format("YYYY") == 2018){
     					// only vwilx rn revisit first thing in 2019!!!!
-    					console.log('annual holding')
-    					console.log(rec);
-    					//thisyeardividends[11].projected = thisyearaverage/nonZero;
     					thisyeardividends[11].projected = 256.840 * .8065;
+    				}
+    				else if(rec.ticker == 'VIEIX' && moment().format("YYYY") == 2018){
+    					// only VIEIX rn revisit first thing in 2019!!!!
+    					thisyeardividends[8].projected = 35;
+    					thisyeardividends[11].projected = 35;
+    				}
+    				// for annual dividend payers, current year = prior year same month * 3%
+    				else if(rec.divperiod == 9){
+    					thisyeardividends[11].projected = thisyeardividends[11].prioryear*1.03;
     				}
     				// for monthly payers, each future month is an average of what has been paid this year    				
     				else if(rec.divperiod == 12){
+    					
+    					/* **************************************** */
+    					/* *********** remove in 2019 ************* */
+    					/* **************************************** */
+    					if(rec.ticker == 'VFIXED' && moment().format("YYYY") == 2018){
+    						var lastActual = 0
+    						for(i=0;i<12;i++){        			
+        						if(thisyeardividends[i].paid) lastActual = thisyeardividends[i].actual;
+        				    }
+    						for(i=moment().month();i<12;i++){        				    	
+        				    	thisyeardividends[i].projected = lastActual;
+        				    }
+    						continue;
+    					}
+    					/* **************************************** */
     					
     					var thisyearaverage = 0;
     					var nonZero = 0;
@@ -351,8 +377,8 @@ console.log("YEAR: " + yr)
     			}
     		}
     	} 
-    }   
-    
+    }
+    console.log("2*************");
     console.log(dividends);
     
     //data = [{ticker:"AAPL",ytd:41.61,divperiod:2,apr:{actual:99, projected:95, prioryear:75, paid:true},aug:13.87,dec:0,divperiod:2,feb:0,jan:0,jul:0,jun:0,mar:0,may:13.87,nov:13.87,oct:0,q1:0,q2:13.87,q3:13.87,q4:13.87,sep:0,ytd:41.61}]

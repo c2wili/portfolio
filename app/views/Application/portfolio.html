@@ -6,6 +6,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta charset="utf-8">
 
+	
 	#{script 'jquery-3.1.0.min.js' /}
 	#{script 'jquery.number.min.js' /}
 	#{script 'jquery.dataTables.min.js' /}
@@ -14,8 +15,12 @@
 	#{script 'bootstrap-datepicker.min.js' /}
 	#{script 'bootbox.min.js' /}
 	#{script 'moment-2.15.1.min.js' /}
+
+	#{script 'highcharts-6.1.0.js' /}	
+	#{script 'highcharts-heatmap.js' /}
+	#{script 'highcharts-treemap.js' /}
 	
-	#{script 'd3.v3.js' /}
+	#{script 'portfolioTreeMap.js' /}
 
 	
 	<link rel="stylesheet" type="text/css" href="/public/javascripts/bootstrap-4.0.0/css/bootstrap.min.css" ></link>
@@ -392,6 +397,8 @@
 			// dividend record
 			$('#btn-record-dividend').on('click', function(event) {
 				
+				var type = $('.btn-group > .btn.active').val();
+				
 		    	var exdt = $('#dividend-ex-date').val();
 		    	var paydt = $('#dividend-pay-date').val();
 		    	var divamt = $('#dividend-amount').val();
@@ -400,7 +407,7 @@
 		    	
 		    	if(drip && reinvestprice == '') { alert('drip error'); return; }	
 		    	
-		    	var divstock = {id: stock.id, ticker:stock.ticker, exdate: exdt, paydate: paydt, divamount: divamt, drip: drip, reinvestprice: reinvestprice}
+		    	var divstock = {id: stock.id, ticker:stock.ticker, type: type, exdate: exdt, paydate: paydt, divamount: divamt, drip: drip, reinvestprice: reinvestprice}
 		 
 				$.getJSON( "rest?hnd=recorddividend", divstock, function( resp ) {				    
 				 	
@@ -538,14 +545,22 @@
 		 	    daysOfWeekDisabled: "0,6",
 		 	    autoclose: true,
 		 	   todayHighlight:true
-		 	});			 	
+		 	});		
+		 	
+		 	$(".btn-group > .btn").click(function(){
+		 	    $(".btn-group > .btn").removeClass("active");
+		 	    $(this).addClass("active");
+		 	});
 	    	
+		 	//loadTreeMap();
 	    }); //end .ready
 	    
 	    function reloadPageContent(){
 	    	
 	    	var overview = $('#overview').DataTable()
 	    	overview.ajax.reload();	
+	    	
+	    	//loadTreeMap();
 	    }
 	    
 	    function switchPortfolio(id){
@@ -635,6 +650,11 @@
           <input id="zerosharechk" type="checkbox"> Show holdings with 0 shares
     </div>    
   </div><!-- row -->
+  <div clas='row'>
+    <div class='col-12'>
+      <div id='portfolio-tree-map'></div>
+    </div>
+  </div>
 </div><!-- container -->  
 
 
@@ -786,6 +806,14 @@
         </button>
       </div>
       <div class="modal-body">
+	     <div class="form-group">	
+		   <div class="btn-group d-flex justify-content-center">
+		     <button class="btn btn-primary btn-sm btn-outline-secondary active" autofocus="true" value="dividend">Dividend</button>
+		     <button class="btn btn-primary btn-sm btn-outline-secondary" value="st gain">Short Term Gain</button>
+		     <button class="btn btn-primary btn-sm btn-outline-secondary" value="lt gain">Long Term Gain</button>
+		   </div>
+		 </div>
+
       
 	      <div class="form-group has-feedback">
 	      	<input id="dividend-ex-date" name="buy-date" type="text" class="form-control" placeholder="ex-div date">

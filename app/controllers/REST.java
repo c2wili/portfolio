@@ -19,12 +19,15 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 import org.apache.commons.dbutils.DbUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -249,7 +252,7 @@ public class REST extends Controller {
 			 "\n   AND t.portfolio_id = ? " +
 			 "\n ORDER BY t.ticker, t.activity_date ";
 	
-			Logger.info(sql);
+			Logger.debug(sql);
 	
 			ps = con.prepareStatement(sql);
 			ps.setInt(1, portfolioId);
@@ -516,7 +519,7 @@ public class REST extends Controller {
 						 "\nORDER BY activity_date, t.id asc";
 			
 			
-			Logger.info(sql);
+			Logger.debug(sql);
 			
 			
 			ps = con.prepareStatement(sql);
@@ -660,7 +663,7 @@ public class REST extends Controller {
 			HashMap sessionHash = Cache.get(session.getId(), HashMap.class);
 			
 			HashMap quotes = (HashMap) sessionHash.get("quotes");
-			Logger.info(quotes.size()+"");
+			
 			while(rs.next()){
 				JsonObject jsonRow = new JsonObject();
 				
@@ -1003,6 +1006,7 @@ public class REST extends Controller {
   
     public static void recordDividend()throws Exception {
 
+    	String type = (String)requestParams.get("type");
     	String ticker = (String)requestParams.get("ticker");
     	String exdate = (String)requestParams.get("exdate");
     	String paydate = (String)requestParams.get("paydate");
@@ -1021,47 +1025,42 @@ public class REST extends Controller {
  			con = HikariCP.getConnection();
 
  	    	// how many shares owned as of the ex-div date
- 	    	String sql = "SELECT sum(shares-shares_sold) AS shares_owned " +
-                         "\n FROM( " +
-                         "\n  SELECT t.id AS buy_id " +
-                         "\n         ,t.activity_date " +
-                         "\n         ,t.shares " +
-                         "\n         ,SUM(COALESCE(s.shares,0)) shares_sold " +
-                         "\n  FROM portfolio.holdings h  " +
-                         "\n  JOIN portfolio.trades t  " +
-                         "\n    ON h.ticker = t.ticker  " +
-                         "\n   AND h.portfolio_id = t.portfolio_id  " +
-                         "\n  LEFT OUTER JOIN portfolio.salesdetail s " + 
-                         "\n    ON t.id = s.buy_trades_id  " +
-                         "\n   AND t.portfolio_id = s.portfolio_id  " +
-                         "\n   AND s.sales_date <= ? " +
-                         "\n  WHERE h.portfolio_id = ? " +
-                         "\n    AND h.ticker = ? " +
-                         "\n    AND t.activity_type IN ('buy', 'drip') " + 
-                         "\n    AND t.activity_date < ?  " +
-                         "\n   GROUP BY 1,2,3  " +
-                         "\n )z";
- 			Logger.debug(sql);
+ 	    	String sql = "SELECT COALESCE(SUM(CASE WHEN activity_type='sell' THEN shares*-1 ELSE shares END),0) AS shares_owned " +
+                         "\n FROM portfolio.trades " +
+                         "\n WHERE portfolio_id = ? " +
+                         "\n   AND ticker = ? " +
+                         "\n   AND activity_date < ?  " +
+                         "\n   AND activity_type IN ('buy', 'drip', 'sell') ";
+ 			
+ 	    	Logger.debug(sql);
  			ps = con.prepareStatement(sql);
- 			ps.setDate(1, java.sql.Date.valueOf(exdate));
- 			ps.setInt(2, portfolioId); 
- 			ps.setString(3, ticker);
- 			ps.setDate(4, java.sql.Date.valueOf(exdate)); 			 			
+ 			ps.setInt(1, portfolioId); 
+ 			ps.setString(2, ticker);
  			
- 			rs = ps.executeQuery();
- 			
- 			double shares_owned = 0.0;
- 			while(rs.next()){
- 				String s = rs.getString("shares_owned");
- 				shares_owned = Double.parseDouble(s);
+ 			String querydate = exdate;
+ 			// if this is a long term gain entry, shares must have been owned prior to 1 year from ex-date
+ 			if(type.equals("lt gain")) {
+ 				DateTimeFormatter formatter = DateTimeFormat.forPattern("yyyy-MM-dd");
+ 				DateTime dt = formatter.parseDateTime(exdate);
+ 				querydate = dt.minusYears(1).toString(formatter);
  			}
+ 			ps.setDate(3, java.sql.Date.valueOf(querydate));
+
+ 			rs = ps.executeQuery();
+
+ 			double shares_owned = 0.0;
  			
- 			 
- 			rs.close();
+ 			while(rs.next()){
+ 	 			String s = rs.getString("shares_owned");
+ 				shares_owned = Double.parseDouble(s);
+ 			} 			
+ 			
+ 			rs.close(); 			
  			ps.close();
  			
  			if(shares_owned == 0.0){
- 				throw new Exception("ERROR: recordDividend() no shares owned on ex-dividend date");  
+ 				Logger.info("0 shares owned by ex-div date");
+ 				renderJSON("{\"success\":true}");
  			} 			
  			Logger.info("shares owned by ex-div date of " + exdate + " was " + shares_owned);
  	    	
@@ -1077,19 +1076,21 @@ public class REST extends Controller {
  			
  			if(div_trade_id == 0) throw new Exception("ERROR: recordDividend() unable to determine dividend transaction id");  
  			
- 	    	// insert dividend paid record
- 			sql = "INSERT INTO portfolio.trades(id, portfolio_id, ticker,activity_type,activity_date,price,shares) VALUES (?,?,?,'dividend',?,?,?)";
+ 	    	// insert dividend/st or lt gain paid record
+ 			sql = "INSERT INTO portfolio.trades(id, portfolio_id, ticker,activity_type,activity_date,price,shares) VALUES (?,?,?,?,?,?,?)";
  			
  			ps = con.prepareStatement(sql);
  			ps.setInt(1, div_trade_id);
  			ps.setInt(2, portfolioId);
  			ps.setString(3, ticker);
- 			ps.setDate(4, java.sql.Date.valueOf(paydate)); 			 			
- 			ps.setDouble(5, Double.parseDouble(divamount));
- 			ps.setDouble(6, shares_owned);
+ 			ps.setString(4, type);
+ 			ps.setDate(5, java.sql.Date.valueOf(paydate)); 			 			
+ 			ps.setDouble(6, Double.parseDouble(divamount));
+ 			ps.setDouble(7, shares_owned);
  			
  			ps.executeUpdate();
  			ps.close();
+
  			
 
  	    	// if this is a drip then purchase shares with the $$$    	    
