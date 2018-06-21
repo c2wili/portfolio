@@ -227,7 +227,7 @@
 				            { data: "activity_date" },
 				            { data: "activity_type" },
 				            { data: "shares" , className: "dt-right",render: function ( data, type, row ) { if(data=='----') return data; else return $.number(data,4); } },
-				            { data: "price", className: "dt-right", render: function ( data, type, row ) { if(data=='----') return data; else return '$' +$.number(data,3); } },
+				            { data: "price", className: "dt-right", render: function ( data, type, row ) { if(data=='----') return data; else return '$' +$.number(data,4); } },
 				            { data: "basis", className: "dt-right", render: function ( data, type, row ) { if(data=='----') return data; else return '$' +$.number(data,2); } },
 				            { data: "gainloss", className: "dt-right", createdCell: function(td, cellData, rowData, row, col) { if(cellData == '----'){}else if(Number(cellData)<0){ $(td).css('color','red'); } else { $(td).css('color','green'); }}, render: function ( data, type, row, meta ) { if(data=='----') return data; else return '$' +$.number(data,2); } },
 				            { "targets": 9, "width":"140px", "orderable":false, "data":null, render: function ( data, type, row ) { if(row.activity_type != "drip"){ return "<i class='fa fa-trash-o fa-lg ico-trash' aria-hidden='true'></i>" } else return ""; } }

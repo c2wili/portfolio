@@ -137,7 +137,7 @@ public class REST extends Controller {
 				HikariCP.close();
 			} 
 			catch (Exception e) {
-				Logger.error("getHistory: Error closing connection " + e.getMessage());
+				Logger.error("updatePrices: Error closing connection " + e.getMessage());
 			} 
     	}			
     	
@@ -191,7 +191,7 @@ public class REST extends Controller {
 				HikariCP.close();
 			} 
 			catch (Exception e) {
-				Logger.error("getHistory: Error closing connection " + e.getMessage());
+				Logger.error("updatePrices: Error closing connection " + e.getMessage());
 			} 
     	}
 	}
