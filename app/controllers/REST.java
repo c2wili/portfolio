@@ -152,8 +152,10 @@ public class REST extends Controller {
             
             StringWriter writer = new StringWriter();
             IOUtils.copy(res.getStream(), writer);
-            
+             
             String rawquotes = writer.toString();
+            Logger.info("web service called");
+            Logger.info(rawquotes);
             rawquotes = rawquotes.replace("\n", "").replace("\r", "").replaceAll("  ", "");
             rawquotes = rawquotes.replaceAll("1. symbol", "symbol").replaceAll("2. price","price").replaceAll("3. volume", "volume").replaceAll("4. timestamp","timestamp");
             rawquotes = rawquotes.replaceAll("Stock Quotes", "quotes");
@@ -185,6 +187,8 @@ public class REST extends Controller {
     	}
     	catch(Exception e){
     		Logger.info("error parsing quotes " + e.getMessage());
+    		
+            
     	}
     	finally{
 			try {				
