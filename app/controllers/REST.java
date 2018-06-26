@@ -137,11 +137,12 @@ public class REST extends Controller {
 				HikariCP.close();
 			} 
 			catch (Exception e) {
-				Logger.error("updatePrices: Error closing connection " + e.getMessage());
+				Logger.info("updatePrices: Error closing connection " + e.getMessage());
 			} 
     	}			
     	
     	String symbols = joiner.toString(); 
+    	Logger.info("symbols: " + symbols);
 		try{		    	
 	    		
             WSRequest req = WS.url("https://www.alphavantage.co/query?function=BATCH_STOCK_QUOTES&symbols=" + symbols + "&apikey=CMWNJD2K400SVE2D");
@@ -191,7 +192,7 @@ public class REST extends Controller {
 				HikariCP.close();
 			} 
 			catch (Exception e) {
-				Logger.error("updatePrices: Error closing connection " + e.getMessage());
+				Logger.info("updatePrices: Error closing connection " + e.getMessage());
 			} 
     	}
 	}
