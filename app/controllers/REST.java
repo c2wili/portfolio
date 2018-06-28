@@ -44,6 +44,7 @@ public class REST extends Controller {
 	private static Params requestParams;
 	private static int portfolioId = 1;
 	private static HashMap sessionHash;
+	private static String dbschema = "_test";
 	
 	/*
 	 * get quotes from cache or api if needed.   
@@ -57,6 +58,8 @@ public class REST extends Controller {
 
 	public static void main() throws Exception {
     	
+		Logger.setUp("DEBUG");
+		
     	requestParams = params;
     	
     	String hnd = (String)params.get("hnd");
@@ -116,7 +119,7 @@ public class REST extends Controller {
     	try{
     	    con = HikariCP.getConnection();
     	    ps = con.prepareStatement("SELECT ticker " +
-                                      "FROM PORTFOLIO.HOLDINGS " +
+                                      "FROM portfolio" + dbschema + ".HOLDINGS " +
                                       "GROUP BY 1");
     	    rs = ps.executeQuery();
 	    
@@ -171,8 +174,8 @@ public class REST extends Controller {
     	    con = HikariCP.getConnection();
 
 
-    	    //ps = con.prepareStatement("INSERT INTO portfolio.quote_hist (ticker,price,ts) VALUES (?,?,?::timestamp)");
-    	    ps = con.prepareStatement("INSERT INTO portfolio.quote_hist (ts,ticker,price) VALUES (now(),?,?)");
+    	    //ps = con.prepareStatement("INSERT INTO portfolio" + dbschema + ".quote_hist (ticker,price,ts) VALUES (?,?,?::timestamp)");
+    	    ps = con.prepareStatement("INSERT INTO portfolio" + dbschema + ".quote_hist (ts,ticker,price) VALUES (now(),?,?)");
 
     	    for (String key : qr.getQuotes().keySet()) {
 
@@ -211,7 +214,7 @@ public class REST extends Controller {
 			
 		try {
 			con = HikariCP.getConnection();
-			ps = con.prepareStatement("INSERT INTO portfolio.quote_hist (ts,ticker,price) VALUES (now(),?,?)");
+			ps = con.prepareStatement("INSERT INTO portfolio" + dbschema + ".quote_hist (ts,ticker,price) VALUES (now(),?,?)");
 			
 		    
 	        ps.setString(1, ticker);
@@ -250,12 +253,12 @@ public class REST extends Controller {
 			con = HikariCP.getConnection();
 	
 			String sql = "\n SELECT t.*, h.sector, h.divperiod " +
-			 "\n FROM portfolio.trades t " +
-			 "\n JOIN portfolio.holdings h " +
-			 "\n   ON t.ticker = h.ticker " +
-			 "\n WHERE t.activity_type in ('dividend','lt gain','st gain') " +
-			 "\n   AND t.portfolio_id = ? " +
-			 "\n ORDER BY t.ticker, t.activity_date ";
+			             "\n FROM portfolio" + dbschema + ".trades t " +
+			             "\n JOIN portfolio" + dbschema + ".holdings h " +
+			             "\n   ON t.ticker = h.ticker " +
+			             "\n WHERE t.activity_type in ('dividend','lt gain','st gain') " +
+			             "\n   AND t.portfolio_id = ? " +
+			             "\n ORDER BY t.ticker, t.activity_date ";
 	
 			Logger.debug(sql);
 	
@@ -332,7 +335,7 @@ public class REST extends Controller {
 			if(activity_type.equals("sell")){
 
 				
-				String sql = " DELETE FROM portfolio.salesdetail " +
+				String sql = " DELETE FROM portfolio" + dbschema + ".salesdetail " +
 					         "\nWHERE trades_id = ? " +
 					         "\n  AND ticker = ? " +
 					         "\n  and portfolio_id = ? ";
@@ -348,7 +351,7 @@ public class REST extends Controller {
 				ps.executeUpdate();
 				ps.close();
 				
-				sql = " DELETE FROM portfolio.trades " +
+				sql = " DELETE FROM portfolio" + dbschema + ".trades " +
 				      "\nWHERE id = ? " +
 					  "\n  AND ticker = ? " +
 					  "\n  AND activity_type = 'sell' " +
@@ -371,7 +374,7 @@ public class REST extends Controller {
 				Logger.info("Remove drip record " + ticker + ", " + activity_type);
 				
 				// remove any possible drip trade
-				String sql = " DELETE FROM portfolio.trades t " +
+				String sql = " DELETE FROM portfolio" + dbschema + ".trades t " +
 						     "\n  WHERE t.ticker = ? " +
 						     "\n  AND t.activity_type = 'drip' " +
 						     "\n  and t.portfolio_id = ? " +
@@ -388,7 +391,7 @@ public class REST extends Controller {
 				ps.close();
 				
 				// delete the dividend paid
-				sql = " DELETE FROM portfolio.trades " +
+				sql = " DELETE FROM portfolio" + dbschema + ".trades " +
 					  "\nWHERE id = ? " +
 					  "\n  AND ticker = ? " +
 				      "\n  AND activity_type = ? " +
@@ -410,12 +413,12 @@ public class REST extends Controller {
 			else if(activity_type.equals("drip")){
 
 				// remove the corresponding dividend paid record
-				String sql = " DELETE FROM portfolio.trades t " +
+				String sql = " DELETE FROM portfolio" + dbschema + ".trades t " +
 						     "\n  WHERE t.ticker = ? " +
 						     "\n  AND t.activity_type = 'dividend' " +
 						     "\n  and t.portfolio_id = ? " +
 						     "\n  AND ROUND(price*shares,2) IN (SELECT ROUND(price*shares,2) " + 
-						     "\n                                FROM portfolio.trades td " +
+						     "\n                                FROM portfolio" + dbschema + ".trades td " +
 						     "\n                                WHERE td.activity_type = 'drip' " +
 						     "\n                                  AND td.ticker = t.ticker " +
 						     "\n                                  AND td.activity_date = t.activity_date " +
@@ -435,7 +438,7 @@ public class REST extends Controller {
 				ps.close();
 				
 				// delete the drip record
-				sql = " DELETE FROM portfolio.trades " +
+				sql = " DELETE FROM portfolio" + dbschema + ".trades " +
 					  "\nWHERE id = ? " +
 					  "\n  AND ticker = ? " +
 				      "\n  AND activity_type = 'drip' " +
@@ -454,7 +457,7 @@ public class REST extends Controller {
 			}	
 			// remove any other buy records
 			else{
-				String sql = " DELETE FROM portfolio.trades " +
+				String sql = " DELETE FROM portfolio" + dbschema + ".trades " +
 						     "\nWHERE id = ? " +
 						     "\n  AND ticker = ? " +
 						     "\n  and portfolio_id = ? ";
@@ -516,8 +519,8 @@ public class REST extends Controller {
 			             "\n              WHEN t.activity_type = 'sell' THEN CAST(s.gain_loss AS VARCHAR(50)) " +
 			             "\n           ELSE '----' " +
 			             "\n        END AS gainloss " +
-						 "\nFROM portfolio.trades t " +
-					     "\nLEFT OUTER JOIN portfolio.salesdetail s " + 
+						 "\nFROM portfolio" + dbschema + ".trades t " +
+					     "\nLEFT OUTER JOIN portfolio" + dbschema + ".salesdetail s " + 
                          "\n  ON t.id = s.trades_id " + 
 						 "\nWHERE t.ticker = ? " +
 						 "\n  and t.portfolio_id = ? " +
@@ -629,14 +632,14 @@ public class REST extends Controller {
 						 "\n        t.shares, " +
 						 "\n        t.price, " +
 						 "\n        SUM(COALESCE(s.shares,0)) AS shares_sold " +						 
-						 "\n FROM portfolio.holdings h " +
-                                                 "\n join portfolio.brokerage b " + 
+						 "\n FROM portfolio" + dbschema + ".holdings h " +
+                                                 "\n join portfolio" + dbschema + ".brokerage b " + 
                                                  "\n   on h.brokerage_id = b.id " + 
-						 "\n left outer JOIN portfolio.trades t " +
+						 "\n left outer JOIN portfolio" + dbschema + ".trades t " +
 						 "\n   ON h.ticker = t.ticker " +
 						 "\n  AND h.portfolio_id = t.portfolio_id " +
 						 "\n  AND t.activity_type IN ('buy', 'drip') " +
-						 "\n LEFT OUTER JOIN portfolio.salesdetail s " +
+						 "\n LEFT OUTER JOIN portfolio" + dbschema + ".salesdetail s " +
 						 "\n   ON t.id = s.buy_trades_id " +
 						 "\n  AND t.portfolio_id = s.portfolio_id " +
 						 "\n WHERE h.portfolio_id = ? " +						 
@@ -646,7 +649,7 @@ public class REST extends Controller {
 						 "\n )y " + 
 						 "\n GROUP BY 1,2,3,4,5 " + 
 						 "\n )x " + 
-						 "\n LEFT OUTER JOIN portfolio.trades d " + 
+						 "\n LEFT OUTER JOIN portfolio" + dbschema + ".trades d " + 
 						 "\n   ON x.ticker = d.ticker " +
 						 "\n  AND x.portfolio_id = d.portfolio_id " +
 						 "\nAND d.activity_type in ('dividend','lt gain','st gain') " + 
@@ -757,7 +760,7 @@ public class REST extends Controller {
  	
  		try {
  			con = HikariCP.getConnection();
- 			ps = con.prepareStatement("SELECT MAX(ID)+1 as MAXID FROM portfolio.trades");
+ 			ps = con.prepareStatement("SELECT MAX(ID)+1 as MAXID FROM portfolio" + dbschema + ".trades");
  			rs = ps.executeQuery();
  			int nextid=0;
  			while(rs.next()){
@@ -769,7 +772,7 @@ public class REST extends Controller {
  				
  			if(nextid == 0) throw new Exception("Max id not determined");
  			
- 			String sql = "INSERT INTO portfolio.trades(id,portfolio_id,ticker,activity_type,activity_date,price,shares) VALUES (?,?,?,'buy',?,?,?)";
+ 			String sql = "INSERT INTO portfolio" + dbschema + ".trades(id,portfolio_id,ticker,activity_type,activity_date,price,shares) VALUES (?,?,?,'buy',?,?,?)";
  			Logger.debug(sql);
  			
  			ps = con.prepareStatement(sql);
@@ -822,7 +825,7 @@ public class REST extends Controller {
  		try {
  			con = HikariCP.getConnection();
  			
- 			String sql = "INSERT INTO portfolio.holdings (portfolio_id,ticker,name,brokerage_id,drip,divperiod,sector) VALUES (?,?,?,?,?,?,?)";
+ 			String sql = "INSERT INTO portfolio" + dbschema + ".holdings (portfolio_id,ticker,name,brokerage_id,drip,divperiod,sector) VALUES (?,?,?,?,?,?,?)";
  			Logger.debug(sql);
  			
  			ps = con.prepareStatement(sql);
@@ -874,7 +877,7 @@ public class REST extends Controller {
  		
  		try {
  			con = HikariCP.getConnection();
- 			ps = con.prepareStatement("SELECT MAX(ID)+1 as MAXID FROM portfolio.trades");
+ 			ps = con.prepareStatement("SELECT MAX(ID)+1 as MAXID FROM portfolio" + dbschema + ".trades");
  			rs = ps.executeQuery();
  			int sales_trade_id=0;
  			while(rs.next()){
@@ -887,7 +890,7 @@ public class REST extends Controller {
  			if(sales_trade_id == 0) throw new Exception("ERROR: sellPosition() unable to determine sales transaction id");  
  			
  			// insert the sell transaction
- 			String sql = "INSERT INTO portfolio.trades (id,portfolio_id,ticker,activity_type,activity_date,price,shares) VALUES (?,?,?,'sell',?,?,?)";
+ 			String sql = "INSERT INTO portfolio" + dbschema + ".trades (id,portfolio_id,ticker,activity_type,activity_date,price,shares) VALUES (?,?,?,'sell',?,?,?)";
  			
  			ps = con.prepareStatement(sql);
  			ps.setInt(1, sales_trade_id);
@@ -909,11 +912,11 @@ public class REST extends Controller {
  	 			  "\n       ,t.shares " +
  	 			  "\n       ,t.price " + 
  	 			  "\n       ,SUM(COALESCE(s.shares,0)) shares_sold " +
- 	 			  "\n  FROM portfolio.holdings h  " +
- 	 			  "\n  JOIN portfolio.trades t  " +
+ 	 			  "\n  FROM portfolio" + dbschema + ".holdings h  " +
+ 	 			  "\n  JOIN portfolio" + dbschema + ".trades t  " +
  	 			  "\n    ON h.ticker = t.ticker  " +
  	 			  "\n   AND h.portfolio_id = t.portfolio_id  " +
- 	 			  "\n  LEFT OUTER JOIN portfolio.salesdetail s " + 
+ 	 			  "\n  LEFT OUTER JOIN portfolio" + dbschema + ".salesdetail s " + 
  	 			  "\n    ON t.id = s.buy_trades_id " +
  	 			  "\n   AND t.portfolio_id = s.portfolio_id  " +
  	 			  "\n  WHERE h.portfolio_id = ? " +
@@ -929,7 +932,7 @@ public class REST extends Controller {
  			ps.setString(2, ticker);
  			rs = ps.executeQuery();
 
- 			psDetail = con.prepareStatement("INSERT INTO portfolio.salesdetail " +
+ 			psDetail = con.prepareStatement("INSERT INTO portfolio" + dbschema + ".salesdetail " +
  			                                "(ts,portfolio_id,ticker, trades_id,buy_trades_id,sales_date,shares,sale_price,basis,gain_loss) " +
  			                                "VALUES (now(),?,?,?,?,?,?,?,?,?);");
  			
@@ -1031,7 +1034,7 @@ public class REST extends Controller {
 
  	    	// how many shares owned as of the ex-div date
  	    	String sql = "SELECT COALESCE(SUM(CASE WHEN activity_type='sell' THEN shares*-1 ELSE shares END),0) AS shares_owned " +
-                         "\n FROM portfolio.trades " +
+                         "\n FROM portfolio" + dbschema + ".trades " +
                          "\n WHERE portfolio_id = ? " +
                          "\n   AND ticker = ? " +
                          "\n   AND activity_date < ?  " +
@@ -1069,7 +1072,7 @@ public class REST extends Controller {
  			} 			
  			Logger.info("shares owned by ex-div date of " + exdate + " was " + shares_owned);
  	    	
- 			ps = con.prepareStatement("SELECT MAX(ID)+1 as MAXID FROM portfolio.trades");
+ 			ps = con.prepareStatement("SELECT MAX(ID)+1 as MAXID FROM portfolio" + dbschema + ".trades");
  			rs = ps.executeQuery();
  			int div_trade_id=0;
  			while(rs.next()){
@@ -1082,7 +1085,7 @@ public class REST extends Controller {
  			if(div_trade_id == 0) throw new Exception("ERROR: recordDividend() unable to determine dividend transaction id");  
  			
  	    	// insert dividend/st or lt gain paid record
- 			sql = "INSERT INTO portfolio.trades(id, portfolio_id, ticker,activity_type,activity_date,price,shares) VALUES (?,?,?,?,?,?,?)";
+ 			sql = "INSERT INTO portfolio" + dbschema + ".trades(id, portfolio_id, ticker,activity_type,activity_date,price,shares) VALUES (?,?,?,?,?,?,?)";
  			
  			ps = con.prepareStatement(sql);
  			ps.setInt(1, div_trade_id);
@@ -1105,7 +1108,7 @@ public class REST extends Controller {
  	    		double dripshares = (shares_owned * Double.parseDouble(divamount)) / Double.parseDouble(reinvestprice);
 		 	    Logger.info("Dividend re-invest shares purchased " + dripshares);
 		 	    
- 	 			sql = "INSERT INTO portfolio.trades(id,portfolio_id,ticker,activity_type,activity_date,price,shares) VALUES (?,?,?,'drip',?,?,?);";
+ 	 			sql = "INSERT INTO portfolio" + dbschema + ".trades(id,portfolio_id,ticker,activity_type,activity_date,price,shares) VALUES (?,?,?,'drip',?,?,?);";
  	 			
  	 			ps = con.prepareStatement(sql);
  	 			ps.setInt(1, div_trade_id+1);
@@ -1158,20 +1161,20 @@ public class REST extends Controller {
 			
 			String sql = "\n SELECT nodes FROM ( " +
 					     "\n  SELECT 1 AS indx, sector as nodes " +
-					     "\n  FROM portfolio.holdings " +
+					     "\n  FROM portfolio" + dbschema + ".holdings " +
 					     "\n  WHERE portfolio_id = ? " +
 					     "\n    and ticker IN (SELECT ticker " +
-					     "\n                   FROM portfolio.trades " +
+					     "\n                   FROM portfolio" + dbschema + ".trades " +
 					     "\n                   WHERE portfolio_id = ? " +
 					     "\n                     and extract(year from activity_date) = ? " +
 					     "\n                     and activity_type in ('dividend','lt gain','st gain')) " +					     
 					     "\n  GROUP BY 1,2 " +
 					     "\n  UNION ALL  " +
 					     "\n  SELECT 0 AS indx, ticker as nodes " +
-					     "\n  FROM portfolio.holdings " +
+					     "\n  FROM portfolio" + dbschema + ".holdings " +
 					     "\n  WHERE portfolio_id = ? " +
 					     "\n    and ticker IN (SELECT ticker " +
-					     "\n                   FROM portfolio.trades " +
+					     "\n                   FROM portfolio" + dbschema + ".trades " +
 					     "\n                   WHERE portfolio_id = ? " +
 					     "\n                     and extract(year from activity_date) = ? " +
 					     "\n                     and activity_type in ('dividend','lt gain','st gain')) " +
@@ -1215,8 +1218,8 @@ public class REST extends Controller {
 				  "\n FROM ( " +
 				  "\n SELECT 0 AS indx, h.ticker AS src, h.sector AS tgt " +
 				  "\n        ,SUM(shares*price) DIVs " +
-				  "\n FROM portfolio.holdings h " +
-				  "\n JOIN portfolio.trades t " +
+				  "\n FROM portfolio" + dbschema + ".holdings h " +
+				  "\n JOIN portfolio" + dbschema + ".trades t " +
 				  "\n   ON h.portfolio_id = t.portfolio_id " +
 				  "\n  AND h.ticker = t.ticker " +
 				  "\n WHERE h.portfolio_id = ? " +
@@ -1226,8 +1229,8 @@ public class REST extends Controller {
 				  "\n UNION ALL  " +
 				  "\n SELECT 1 AS indx, sector AS src, 'Dividends' AS tgt " +
 				  "\n        ,SUM(shares*price) DIVs " +
-				  "\n FROM portfolio.holdings h " +
-				  "\n JOIN portfolio.trades t " +
+				  "\n FROM portfolio" + dbschema + ".holdings h " +
+				  "\n JOIN portfolio" + dbschema + ".trades t " +
 				  "\n   ON h.portfolio_id = t.portfolio_id " +
 				  "\n  AND h.ticker = t.ticker " +
 				  "\n WHERE h.portfolio_id = ? " +
