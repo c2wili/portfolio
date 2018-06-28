@@ -116,7 +116,7 @@ public class REST extends Controller {
     	try{
     	    con = HikariCP.getConnection();
     	    ps = con.prepareStatement("SELECT ticker " +
-                                      "FROM PORTFOLIO.HOLDINGS " +
+                                      "FROM portfolio.HOLDINGS " +
                                       "GROUP BY 1");
     	    rs = ps.executeQuery();
 	    
