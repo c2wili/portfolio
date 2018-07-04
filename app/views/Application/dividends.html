@@ -92,9 +92,7 @@
         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
           Change Year
         </a>
-        <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-          <a class="dropdown-item" href="javascript:switchYears(2018);">2018</a>
-          <a class="dropdown-item" href="javascript:switchYears(2017);">2017</a>
+        <div class="dropdown-menu" id='dd-changeyears' aria-labelledby="navbarDropdown">
           <!-- <div class="dropdown-divider"></div>
           <a class="dropdown-item" href="#">Something else here</a>
           -->
@@ -207,11 +205,19 @@
         Highcharts.setOptions({
            colors: [ '#50B432', '#058DC7', '#ED561B', '#DDDF00', '#24CBE5', '#64E572', '#FF9655', '#FFF263', '#6AF9C4']
         });
-
-        var yr = 2018;
         
+        var yr = moment().year();
+     
+       
         $( document ).ready(function() {
             loadPage();
+            
+            // populate the switch years dropdown with last 3 years
+            // ~~~~~
+            for(i=0;i<3;i++){
+            	console.log( moment().year()-i)
+            	$("#dd-changeyears").append("<a class='dropdown-item' href='javascript:switchYears(" + (moment().year()-i) + ");'>" + (moment().year()-i) + "</a>");
+            }   
         }); //end .ready
         
         function loadPage(){
@@ -228,6 +234,7 @@
     
                 //buildSankey(yr);
                 buildSankeyChart(resp, yr);
+               
             });
         }
            

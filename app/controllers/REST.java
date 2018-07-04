@@ -60,7 +60,7 @@ public class REST extends Controller {
     	requestParams = params;
     	
     	String hnd = (String)params.get("hnd");
-    	    
+    	Logger.setUp("DEBUG");
     	
     	if(hnd == null) throw new Exception("No handler value provded.");
     	Logger.info("handler: " + hnd);
@@ -250,12 +250,12 @@ public class REST extends Controller {
 			con = HikariCP.getConnection();
 	
 			String sql = "\n SELECT t.*, h.sector, h.divperiod " +
-			 "\n FROM portfolio.trades t " +
-			 "\n JOIN portfolio.holdings h " +
-			 "\n   ON t.ticker = h.ticker " +
-			 "\n WHERE t.activity_type in ('dividend','lt gain','st gain') " +
-			 "\n   AND t.portfolio_id = ? " +
-			 "\n ORDER BY t.ticker, t.activity_date ";
+			             "\n FROM portfolio.trades t " +
+			             "\n JOIN portfolio.holdings h " +
+			             "\n   ON t.ticker = h.ticker " +
+			             "\n WHERE t.activity_type in ('dividend','lt gain','st gain') " +
+			             "\n   AND t.portfolio_id = ? " +
+			             "\n ORDER BY t.ticker, t.activity_date ";
 	
 			Logger.debug(sql);
 	
@@ -292,7 +292,7 @@ public class REST extends Controller {
 			ps.close();
 			rs.close();
 	
-			renderJSON(jsonRows);
+			renderJSON(jsonRows.toString());
 	
 		} 
 		catch (Exception e) {
@@ -613,7 +613,7 @@ public class REST extends Controller {
 	                     "\n ,SUM(d.price*d.shares) div_all " +
 	                     "\n FROM( " +
 		                 "\n SELECT portfolio_id, name, ticker, brokerage, divperiod, "+
-					     "\n        SUM(shares_owned) AS shares,SUM(tot) AS COST, " +
+					     "\n        SUM(shares_owned) AS shares,SUM(COALESCE(tot,0)) AS COST, " +
 					     "\n        CASE WHEN SUM(shares_owned)=0 THEN 0 else SUM(tot)/SUM(shares_owned) end AS avg_cost " +
 					     "\n FROM( " +
 					     "\n SELECT portfolio_id, name, brokerage,ticker,divperiod, " +
@@ -626,7 +626,7 @@ public class REST extends Controller {
 						 "\n        b.name AS brokerage,  " +
 						 "\n        h.divperiod,  " +
 						 "\n        t.id as transaction_id, " +
-						 "\n        t.shares, " +
+						 "\n        COALESCE(t.shares,0) shares,  " +
 						 "\n        t.price, " +
 						 "\n        SUM(COALESCE(s.shares,0)) AS shares_sold " +						 
 						 "\n FROM portfolio.holdings h " +
@@ -683,6 +683,7 @@ public class REST extends Controller {
 					} catch (Exception e) {
 						colVal = rs.getString(colHeader);
 					}
+					
 					if (colVal == null)
 						colVal = "";
 					
@@ -699,7 +700,7 @@ public class REST extends Controller {
 						jsonRow.addProperty(colHeader, colVal);
 					}
 				}
-				 
+				
 				if(quotes.containsKey(jsonRow.get("ticker").getAsString())){
 
 					double shares = jsonRow.get("shares").getAsDouble();
@@ -720,7 +721,7 @@ public class REST extends Controller {
 				// add row to returning result set
 				jsonRows.add(jsonRow);				
 			}
-			
+			Logger.info(jsonRows.toString());
 			renderJSON(jsonRows);
 		
 		} 

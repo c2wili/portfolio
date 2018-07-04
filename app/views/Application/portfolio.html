@@ -92,7 +92,7 @@
 		                d.hnd = 'overview';
 		        		d.zeroshares = $("#zerosharechk").prop('checked');
 		        	}
-		        	,dataSrc: ""
+		        	,dataSrc: "elements"
 		        }
 		 	    ,serveSide: true
 		     	,searching: false
@@ -114,6 +114,7 @@
 		            { data: "div_all" , className: "dt-right", render: function ( data, type, row ) { return '$' +$.number(data,2); } },
 		        	{ "targets": 7, "width":"140px", "orderable":false, "data":null, 
 		        		render: function ( data, type, row ) { 
+		        			
 		        	   		var buy = "<button type='button' class='btn btn-sm btn-outline-secondary '>buy</button>&nbsp;";
 		        	   		var sell = "<button type='button' class='btn btn-sm btn-outline-secondary '>sell</button>&nbsp;";
 		        	   		var div = "<button type='button' class='btn btn-sm btn-outline-secondary '>dividend</button>&nbsp;";
@@ -124,6 +125,7 @@
 		        	}		            
 		        ]
 		 	    ,footerCallback: function (row, data, start, end, display) {
+		 	    	 
 		 	        var api = this.api(),
 		 	        intVal = function (i) {
 		 	              return typeof i === 'string' ?
@@ -138,9 +140,8 @@
 		 	                return intVal(a) + intVal(b);
 		 	            }, 0);
 		 	       
-		 	         $(api.column(6).footer()).html(
-		 	            '$' + $.number(total2,2)
-		 	         );
+		 	         $(api.column(6).footer()).html( '$' + $.number(total2,2) );
+		 	        
 
 			 	     divytd = api
 		 	            .column(8)
@@ -149,9 +150,7 @@
 		 	                return intVal(a) + intVal(b);
 		 	            }, 0);
 		 	       
-		 	         $(api.column(8).footer()).html(
-		 	            '$' + $.number(divytd,2)
-		 	         );
+		 	         $(api.column(8).footer()).html( '$' + $.number(divytd,2) );
 		 	         
 			 	     total3 = api
 		 	            .column(9)
@@ -160,13 +159,11 @@
 		 	                return intVal(a) + intVal(b);
 		 	            }, 0);
 		 	       
-		 	         $(api.column(9).footer()).html(
-		 	            '$' + $.number(total3,2)
-		 	         );
+		 	         $(api.column(9).footer()).html( '$' + $.number(total3,2) );
 		 	      
 		 	    }
 		     });
-	    	
+	     
 	    	var stock = {id:'', name:'', ticker:'', shares:0, date:'', reset:function(){this.id='';this.name='';this.date=''; this.shares=0;}}
 			
 	    	   
@@ -211,7 +208,7 @@
 				        "ajax":{
 				        	url: "rest"
 				        	,data: data
-				        	,dataSrc: ""
+				        	,dataSrc: "elements"
 				        }
 			 	        ,sDom: '<"top"i>rt<"bottom"lp><"clear">' //hide the search box ("f" is not in top or bottom)
 			 	        //,serverSide: true
