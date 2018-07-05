@@ -124,6 +124,19 @@
 							} 
 		        	}		            
 		        ]
+		 	    /*
+		 	    ,initComplete(settings, json){
+		        	console.log('datatable init done')
+		        	loadTreeMap(json);
+		        }
+		 	    */
+		 	    ,drawCallback(settings){
+		 	    	//console.log('datatable re-drawn')
+		 	    	var api = this.api();
+		 	    	//console.log( api.rows( {page:'current'} ).data() );
+		 	    	var json = api.rows( {page:'current'} ).data() ;
+		 	    	loadTreeMap(json);
+		 	    }
 		 	    ,footerCallback: function (row, data, start, end, display) {
 		 	    	 
 		 	        var api = this.api(),
@@ -548,8 +561,6 @@
 		 	    $(".btn-group > .btn").removeClass("active");
 		 	    $(this).addClass("active");
 		 	});
-	    	
-		 	//loadTreeMap();
 	    }); //end .ready
 	    
 	    function reloadPageContent(){
@@ -557,7 +568,6 @@
 	    	var overview = $('#overview').DataTable()
 	    	overview.ajax.reload();	
 	    	
-	    	//loadTreeMap();
 	    }
 	    
 	    function switchPortfolio(id){

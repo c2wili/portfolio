@@ -721,7 +721,7 @@ public class REST extends Controller {
 				// add row to returning result set
 				jsonRows.add(jsonRow);				
 			}
-			Logger.info(jsonRows.toString());
+			
 			renderJSON(jsonRows);
 		
 		} 
