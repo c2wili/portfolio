@@ -80,7 +80,7 @@ console.log("YEAR: " + yr)
 	
     for(key in dividends){   	
     	var rec = dividends[key];
-    	    	
+   	    	
     	var yearlydetails = rec.details;    	
     	for(year in yearlydetails){
 //console.log(rec.ticker + ", " + year)
@@ -158,7 +158,8 @@ console.log("YEAR: " + yr)
     				else{
     					//get last actual payment
     					var lastActual=0;
-    					for(i=0;i<12;i++){        			
+    					console.log(rec) 		
+    					for(i=0;i<12;i++){
     						if(thisyeardividends[i].paid) lastActual = thisyeardividends[i].actual;
     				    }
     					// set projected for all future months
