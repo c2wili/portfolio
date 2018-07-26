@@ -249,10 +249,20 @@ public class REST extends Controller {
 		try {
 			con = HikariCP.getConnection();
 	
-			String sql = "\n SELECT t.*, h.sector, h.divperiod " +
+			String sql = "\n SELECT t.*, h.sector, h.divperiod, c.shares as current_shares " +
 			             "\n FROM portfolio.trades t " +
+			             "\n LEFT OUTER JOIN ( " +
+			             "\n         SELECT ticker, " + 
+			             "\n                SUM(CASE WHEN activity_type = 'sell' THEN SHARES*-1 ELSE shares END) AS shares " +
+			             "\n         FROM PORTFOLIO.TRADES " +
+			             "\n         WHERE activity_type IN ('buy','sell','drip') " + 
+			             "\n           AND portfolio_id = ? " +
+			             "\n         GROUP BY 1 " +
+			             "\n         )c " +
+			             "\n       ON t.ticker = c.ticker " + 					
 			             "\n JOIN portfolio.holdings h " +
 			             "\n   ON t.ticker = h.ticker " +
+			             "\n  AND t.portfolio_id = h.portfolio_id " +
 			             "\n WHERE t.activity_type in ('dividend','lt gain','st gain') " +
 			             "\n   AND t.portfolio_id = ? " +
 			             "\n ORDER BY t.ticker, t.activity_date ";
@@ -261,6 +271,7 @@ public class REST extends Controller {
 	
 			ps = con.prepareStatement(sql);
 			ps.setInt(1, portfolioId);
+			ps.setInt(2, portfolioId);
 	
 			rs = ps.executeQuery();
 	
@@ -276,6 +287,7 @@ public class REST extends Controller {
 				String shares = rs.getString("shares");
 				String sector = rs.getString("sector");
 				String divperiod = rs.getString("divperiod");
+				String current_shares = rs.getString("current_shares");
 	
 				//Logger.info(ticker);
 	
@@ -285,6 +297,7 @@ public class REST extends Controller {
 				jsonRow.addProperty("divperiod", Integer.parseInt(divperiod));
 				jsonRow.addProperty("price", Double.parseDouble(price));
 				jsonRow.addProperty("shares", Double.parseDouble(shares));
+				jsonRow.addProperty("current_shares", Double.parseDouble(current_shares));
 	
 				jsonRows.add(jsonRow);
 	
