@@ -10,6 +10,8 @@ console.log("YEAR: " + yr)
 		oDividend.push({actual:0, projected:0, prioryear:0, paid:false});
 	}
 	
+	var currentSharesOwned = [];
+	
     /* *********************************************************** */
     /* ************* remove in 2019 ****************************** */
     /* *********************************************************** */
@@ -56,6 +58,9 @@ console.log("YEAR: " + yr)
 		tmpO.details[activity_year][activity_month].paid = true;	
 		tmpO.details[activity_year][activity_month].amount = rec.price
 		tmpO.details[activity_year][activity_month].shares = rec.shares
+		tmpO.current_shares = rec.current_shares;
+		
+		currentSharesOwned[rec.ticker] = rec.current_shares;
     });
     
     
@@ -94,6 +99,9 @@ console.log("YEAR: " + yr)
         	// while spinning through build the current year projections
     		if(year == yr){ 
     			
+    			// if we don't own any shares, don't build future projections
+    			if(rec.current_shares == 0) continue;
+    			
     			var thisyeardividends = yearlydetails[year]
     			
     			//if we are looking at prior year data, no projections
@@ -110,7 +118,7 @@ console.log("YEAR: " + yr)
     			}
     			// for all other months we have current year actuals we can use for future projections
     			else{
-    				
+    			 	
     				if(rec.ticker == 'VWILX' && moment().format("YYYY") == 2018){
     					// only vwilx rn revisit first thing in 2019!!!!
     					thisyeardividends[11].projected = 256.840 * .8065;
@@ -235,7 +243,7 @@ console.log("YEAR: " + yr)
     }
     	 
     function formatCells(td, cellData, rowData, row, col){
-
+ 
     	if(( rowData.divperiod == 1 && (col == 2 || col == 6 || col == 10 || col == 14) ) || 
     	   ( rowData.divperiod == 2 && (col == 3 || col == 7 || col == 11 || col == 15) ) ||
     	   ( rowData.divperiod == 3 && (col == 4 || col == 8 || col == 12 || col == 16) ) ||
@@ -248,8 +256,10 @@ console.log("YEAR: " + yr)
     				$(td).addClass('divgain');
     			else 
     				$(td).addClass('divloss');
-    		else
-    			$(td).addClass('divexpected');
+    		else{
+    			if(currentSharesOwned[rowData.ticker]>0)
+    				$(td).addClass('divexpected');
+    		}
     	}
     }
     

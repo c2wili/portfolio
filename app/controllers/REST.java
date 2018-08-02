@@ -332,9 +332,10 @@ public class REST extends Controller {
 
     	String id = (String)requestParams.get("id");
     	String ticker = (String)requestParams.get("ticker");
+    	String brokerage_id = (String)requestParams.get("brokerage_id");
     	String activity_type = (String)requestParams.get("activity_type");
     	     	
-    	Logger.info("Remove historical record for " + ticker + ", id: " + id + ", type: " + activity_type );
+    	Logger.info("Remove historical record for " + ticker + ", brokerage: " + brokerage_id + ", id: " + id + ", type: " + activity_type );
 		PreparedStatement ps = null;
 		Connection con = null;
 		
@@ -364,7 +365,8 @@ public class REST extends Controller {
 				sql = " DELETE FROM portfolio.trades " +
 				      "\nWHERE id = ? " +
 					  "\n  AND ticker = ? " +
-					  "\n  AND activity_type = 'sell' " +
+					  "\n  AND brokerage_id = ? " +
+					  "\n  AND activity_type = 'sell' " +					  
 					  "\n  and portfolio_id = ? ";
 				
 				Logger.debug(sql);
@@ -372,7 +374,8 @@ public class REST extends Controller {
 				ps = con.prepareStatement(sql);
 				ps.setInt(1, Integer.parseInt(id));
 				ps.setString(2, ticker);
-				ps.setInt(3, portfolioId);
+				ps.setInt(3, Integer.parseInt(brokerage_id));
+				ps.setInt(4, portfolioId);
 				
 				ps.executeUpdate();
 				ps.close();
@@ -388,6 +391,7 @@ public class REST extends Controller {
 						     "\n  WHERE t.ticker = ? " +
 						     "\n  AND t.activity_type = 'drip' " +
 						     "\n  and t.portfolio_id = ? " +
+						     "\n  AND t.brokerage_id = ? " +
 						     "\n  AND t.id = ? ";
 
 				 
@@ -396,7 +400,8 @@ public class REST extends Controller {
 				ps = con.prepareStatement(sql);
 				ps.setString(1, ticker);
 				ps.setInt(2, portfolioId);
-				ps.setInt(3, Integer.parseInt(id)+1);
+				ps.setInt(3, Integer.parseInt(brokerage_id));
+				ps.setInt(4, Integer.parseInt(id)+1);
 				ps.executeUpdate();
 				ps.close();
 				
@@ -404,6 +409,7 @@ public class REST extends Controller {
 				sql = " DELETE FROM portfolio.trades " +
 					  "\nWHERE id = ? " +
 					  "\n  AND ticker = ? " +
+					  "\n  AND brokerage_id = ? " +
 				      "\n  AND activity_type = ? " +
 				      "\n  and portfolio_id = ? ";
 
@@ -413,8 +419,9 @@ public class REST extends Controller {
 				ps = con.prepareStatement(sql);
 				ps.setInt(1, Integer.parseInt(id));
 				ps.setString(2, ticker);
-				ps.setString(3, activity_type);
-				ps.setInt(4, portfolioId);
+				ps.setInt(3, Integer.parseInt(brokerage_id));
+				ps.setString(4, activity_type);
+				ps.setInt(5, portfolioId);
 				
 				ps.executeUpdate();
 				
@@ -425,12 +432,14 @@ public class REST extends Controller {
 				// remove the corresponding dividend paid record
 				String sql = " DELETE FROM portfolio.trades t " +
 						     "\n  WHERE t.ticker = ? " +
+						     "\n  AND t.brokerage_id = ? " +
 						     "\n  AND t.activity_type = 'dividend' " +
 						     "\n  and t.portfolio_id = ? " +
 						     "\n  AND ROUND(price*shares,2) IN (SELECT ROUND(price*shares,2) " + 
 						     "\n                                FROM portfolio.trades td " +
 						     "\n                                WHERE td.activity_type = 'drip' " +
 						     "\n                                  AND td.ticker = t.ticker " +
+						     "\n                                  AND td.brokerage_id = t.brokerage_id " +
 						     "\n                                  AND td.activity_date = t.activity_date " +
 						     "\n                                  AND td.id = ? " +
 						     "\n                                  and td.portfolio_id = t.portfolio_id " +						     
@@ -441,8 +450,9 @@ public class REST extends Controller {
 				
 				ps = con.prepareStatement(sql);
 				ps.setString(1, ticker);
-				ps.setInt(2, portfolioId);
-				ps.setInt(3, Integer.parseInt(id));
+				ps.setInt(2, Integer.parseInt(brokerage_id));
+				ps.setInt(3, portfolioId);
+				ps.setInt(4, Integer.parseInt(id));
 				
 				ps.executeUpdate();
 				ps.close();
@@ -451,6 +461,7 @@ public class REST extends Controller {
 				sql = " DELETE FROM portfolio.trades " +
 					  "\nWHERE id = ? " +
 					  "\n  AND ticker = ? " +
+					  "\n  AND brokerage_id = ? " +
 				      "\n  AND activity_type = 'drip' " +
 				      "\n  and portfolio_id = ? ";
 
@@ -460,7 +471,8 @@ public class REST extends Controller {
 				ps = con.prepareStatement(sql);
 				ps.setInt(1, Integer.parseInt(id));
 				ps.setString(2, ticker);
-				ps.setInt(3, portfolioId);
+				ps.setInt(3, Integer.parseInt(brokerage_id));
+				ps.setInt(4, portfolioId);
 				
 				ps.executeUpdate();
 				
@@ -470,17 +482,16 @@ public class REST extends Controller {
 				String sql = " DELETE FROM portfolio.trades " +
 						     "\nWHERE id = ? " +
 						     "\n  AND ticker = ? " +
+						     "\n  AND brokerage_id = ? " +
 						     "\n  and portfolio_id = ? ";
 				
-
-				
 				Logger.debug(sql);
-				
-				
+								
 				ps = con.prepareStatement(sql);
 				ps.setInt(1, Integer.parseInt(id));
 				ps.setString(2, ticker);
-				ps.setInt(3, portfolioId);
+				ps.setInt(3, Integer.parseInt(brokerage_id));
+				ps.setInt(4, portfolioId);
 				
 				ps.executeUpdate();
 				ps.close();
@@ -510,6 +521,7 @@ public class REST extends Controller {
     public static void getHistory() throws Exception {
  
     	String ticker = (String)requestParams.get("ticker");
+    	String brokerage = (String)requestParams.get("brokerage_id");
     	
     	System.out.println("get stock history for " + ticker);
     	
@@ -522,7 +534,7 @@ public class REST extends Controller {
 		try {
 			con = HikariCP.getConnection();
 			
-			String sql = "\n SELECT t.id, t.portfolio_id, t.ticker,t.activity_type, t.activity_date,t.price " +
+			String sql = "\n SELECT t.id, t.portfolio_id, t.ticker,t.brokerage_id,t.activity_type, t.activity_date,t.price " +
 			             "\n        ,case when t.activity_type = 'sell' then s.shares else t.shares end as shares " +
 			             "\n        ,COALESCE(CAST(s.basis AS VARCHAR(50)),'----') AS basis " +
 			             "\n        ,CASE WHEN t.activity_type in ('dividend','lt gain','st gain') THEN CAST(t.shares*t.price AS VARCHAR(50)) " +
@@ -534,6 +546,7 @@ public class REST extends Controller {
                          "\n  ON t.id = s.trades_id " + 
 						 "\nWHERE t.ticker = ? " +
 						 "\n  and t.portfolio_id = ? " +
+						 "\n  and t.brokerage_id = ? " +
 						 "\nORDER BY activity_date, t.id asc";
 			
 			
@@ -543,6 +556,8 @@ public class REST extends Controller {
 			ps = con.prepareStatement(sql);
 			ps.setString(1, ticker);
 			ps.setInt(2, portfolioId);
+			ps.setInt(3, Integer.parseInt(brokerage));
+			
 			
 			rs = ps.executeQuery();
 			
@@ -622,20 +637,21 @@ public class REST extends Controller {
 			con = HikariCP.getConnection();
 			String showzeroshares = (zeroshares.equals("false")) ? "WHERE shares > shares_sold" : "";
 			String sql = " SELECT x.* " +
-	                     "\n ,SUM(CASE WHEN d.activity_date >= DATE_TRUNC('year', NOW()) THEN d.price*d.shares ELSE 0 END) div_ytd " +
+	                     "\n ,SUM(CASE WHEN DATE_TRUNC('year',d.activity_date) = DATE_TRUNC('year', NOW()) THEN d.price*d.shares ELSE 0 END) div_ytd " +
 	                     "\n ,SUM(d.price*d.shares) div_all " +
 	                     "\n FROM( " +
-		                 "\n SELECT portfolio_id, name, ticker, brokerage, divperiod, "+
+		                 "\n SELECT portfolio_id, name, ticker, brokerage_id, brokerage, divperiod, "+
 					     "\n        SUM(shares_owned) AS shares,SUM(COALESCE(tot,0)) AS COST, " +
 					     "\n        CASE WHEN SUM(shares_owned)=0 THEN 0 else SUM(tot)/SUM(shares_owned) end AS avg_cost " +
 					     "\n FROM( " +
-					     "\n SELECT portfolio_id, name, brokerage,ticker,divperiod, " +
+					     "\n SELECT portfolio_id, name, brokerage_id, brokerage,ticker,divperiod, " +
 					     "\n    shares-shares_sold shares_owned, " +
 					     "\n    (shares-shares_sold)*price AS tot " +
 					     "\n FROM( " +
 						 "\n SELECT h.portfolio_id, " + 
 					     "\n        h.name, " + 
 						 "\n        h.ticker,  " +
+						 "\n        h.brokerage_id,  " +
 						 "\n        b.name AS brokerage,  " +
 						 "\n        h.divperiod,  " +
 						 "\n        t.id as transaction_id, " +
@@ -643,27 +659,29 @@ public class REST extends Controller {
 						 "\n        t.price, " +
 						 "\n        SUM(COALESCE(s.shares,0)) AS shares_sold " +						 
 						 "\n FROM portfolio.holdings h " +
-                                                 "\n join portfolio.brokerage b " + 
-                                                 "\n   on h.brokerage_id = b.id " + 
+                         "\n join portfolio.brokerage b " + 
+                         "\n   on h.brokerage_id = b.id " + 
 						 "\n left outer JOIN portfolio.trades t " +
 						 "\n   ON h.ticker = t.ticker " +
+						 "\n  AND h.brokerage_id = t.brokerage_id " +
 						 "\n  AND h.portfolio_id = t.portfolio_id " +
 						 "\n  AND t.activity_type IN ('buy', 'drip') " +
 						 "\n LEFT OUTER JOIN portfolio.salesdetail s " +
 						 "\n   ON t.id = s.buy_trades_id " +
 						 "\n  AND t.portfolio_id = s.portfolio_id " +
 						 "\n WHERE h.portfolio_id = ? " +						 
-						 "\n GROUP BY 1,2,3,4,5,6,7,8 " +
+						 "\n GROUP BY 1,2,3,4,5,6,7,8,9 " +
 						 "\n )z " +
 						 "\n " + showzeroshares +
 						 "\n )y " + 
-						 "\n GROUP BY 1,2,3,4,5 " + 
+						 "\n GROUP BY 1,2,3,4,5,6 " + 
 						 "\n )x " + 
 						 "\n LEFT OUTER JOIN portfolio.trades d " + 
 						 "\n   ON x.ticker = d.ticker " +
+						 "\n  AND x.brokerage_id = d.brokerage_id " +
 						 "\n  AND x.portfolio_id = d.portfolio_id " +
 						 "\nAND d.activity_type in ('dividend','lt gain','st gain') " + 
-						 "\nGROUP BY 1,2,3,4,5,6,7,8  " +						 
+						 "\nGROUP BY 1,2,3,4,5,6,7,8,9  " +						 
 						 "\nORDER BY name";
 			
 			
@@ -761,12 +779,13 @@ public class REST extends Controller {
     public static void addPosition() throws Exception {
     	 
     	String ticker = (String)requestParams.get("ticker");
+    	String brokerage_id = (String)requestParams.get("brokerage_id");
     	String date = (String)requestParams.get("date");
     	String shares = (String)requestParams.get("shares");
     	String price = (String)requestParams.get("price");
     	
- 	PreparedStatement ps = null;
- 	Connection con = null;
+ 	    PreparedStatement ps = null;
+ 	    Connection con = null;
         ResultSet rs = null;
  	
  		try {
@@ -783,16 +802,17 @@ public class REST extends Controller {
  				
  			if(nextid == 0) throw new Exception("Max id not determined");
  			
- 			String sql = "INSERT INTO portfolio.trades(id,portfolio_id,ticker,activity_type,activity_date,price,shares) VALUES (?,?,?,'buy',?,?,?)";
+ 			String sql = "INSERT INTO portfolio.trades(id,portfolio_id,ticker,brokerage_id,activity_type,activity_date,price,shares) VALUES (?,?,?,?,'buy',?,?,?)";
  			Logger.debug(sql);
  			
  			ps = con.prepareStatement(sql);
  			ps.setInt(1, nextid);
  			ps.setInt(2, portfolioId);
  			ps.setString(3, ticker);
- 			ps.setDate(4, java.sql.Date.valueOf(date)); 			 			
- 			ps.setDouble(5, Double.parseDouble(price));
- 			ps.setDouble(6, Double.parseDouble(shares));
+ 			ps.setInt(4, Integer.parseInt(brokerage_id));
+ 			ps.setDate(5, java.sql.Date.valueOf(date)); 			 			
+ 			ps.setDouble(6, Double.parseDouble(price));
+ 			ps.setDouble(7, Double.parseDouble(shares));
  			
  			
  			ps.executeUpdate();
@@ -807,7 +827,7 @@ public class REST extends Controller {
  		finally {
  			
  			try {				
-                                DbUtils.closeQuietly(ps);
+                DbUtils.closeQuietly(ps);
  				DbUtils.closeQuietly(rs);
  				HikariCP.close();
  				
@@ -876,6 +896,7 @@ public class REST extends Controller {
    
 	    
     	String ticker = (String)requestParams.get("ticker");
+    	String brokerage_id = (String)requestParams.get("brokerage_id");
     	String date = (String)requestParams.get("date");
     	String sshares = (String)requestParams.get("shares");
     	double shares = Double.parseDouble(sshares);
@@ -901,15 +922,16 @@ public class REST extends Controller {
  			if(sales_trade_id == 0) throw new Exception("ERROR: sellPosition() unable to determine sales transaction id");  
  			
  			// insert the sell transaction
- 			String sql = "INSERT INTO portfolio.trades (id,portfolio_id,ticker,activity_type,activity_date,price,shares) VALUES (?,?,?,'sell',?,?,?)";
+ 			String sql = "INSERT INTO portfolio.trades (id,portfolio_id,ticker,brokerage_id,activity_type,activity_date,price,shares) VALUES (?,?,?,?,'sell',?,?,?)";
  			
  			ps = con.prepareStatement(sql);
  			ps.setInt(1, sales_trade_id);
  			ps.setInt(2, portfolioId);
  			ps.setString(3, ticker);
- 			ps.setDate(4, java.sql.Date.valueOf(date)); 			 			
- 			ps.setDouble(5, Double.parseDouble(price));
- 			ps.setDouble(6, shares);
+ 			ps.setInt(4, Integer.parseInt(brokerage_id));
+ 			ps.setDate(5, java.sql.Date.valueOf(date)); 			 			
+ 			ps.setDouble(6, Double.parseDouble(price));
+ 			ps.setDouble(7, shares);
  			
  			ps.executeUpdate();
  			ps.close();
@@ -926,12 +948,14 @@ public class REST extends Controller {
  	 			  "\n  FROM portfolio.holdings h  " +
  	 			  "\n  JOIN portfolio.trades t  " +
  	 			  "\n    ON h.ticker = t.ticker  " +
+ 	 			  "\n   AND h.brokerage_id = t.brokerage_id  " +
  	 			  "\n   AND h.portfolio_id = t.portfolio_id  " +
  	 			  "\n  LEFT OUTER JOIN portfolio.salesdetail s " + 
  	 			  "\n    ON t.id = s.buy_trades_id " +
  	 			  "\n   AND t.portfolio_id = s.portfolio_id  " +
  	 			  "\n  WHERE h.portfolio_id = ? " +
  			      "\n    AND h.ticker = ? " +
+ 			      "\n    AND h.brokerage_id = ? " +
  	 			  "\n    AND t.activity_type IN ('buy', 'drip') " + 
  	 			  "\n  GROUP BY 1,2,3,4 " +
  	 			  "\n )x " +
@@ -941,6 +965,8 @@ public class REST extends Controller {
  			ps = con.prepareStatement(sql);
  			ps.setInt(1, portfolioId);
  			ps.setString(2, ticker);
+ 			ps.setInt(3, Integer.parseInt(brokerage_id));
+ 			
  			rs = ps.executeQuery();
 
  			psDetail = con.prepareStatement("INSERT INTO portfolio.salesdetail " +
@@ -1027,6 +1053,7 @@ public class REST extends Controller {
 
     	String type = (String)requestParams.get("type");
     	String ticker = (String)requestParams.get("ticker");
+    	String brokerage_id = (String)requestParams.get("brokerage_id");
     	String exdate = (String)requestParams.get("exdate");
     	String paydate = (String)requestParams.get("paydate");
     	String divamount = (String)requestParams.get("divamount");
@@ -1048,6 +1075,7 @@ public class REST extends Controller {
                          "\n FROM portfolio.trades " +
                          "\n WHERE portfolio_id = ? " +
                          "\n   AND ticker = ? " +
+                         "\n   AND brokerage_id = ? " +
                          "\n   AND activity_date < ?  " +
                          "\n   AND activity_type IN ('buy', 'drip', 'sell') ";
  			
@@ -1055,6 +1083,8 @@ public class REST extends Controller {
  			ps = con.prepareStatement(sql);
  			ps.setInt(1, portfolioId); 
  			ps.setString(2, ticker);
+ 			ps.setInt(3, Integer.parseInt(brokerage_id));
+
  			
  			String querydate = exdate;
  			// if this is a long term gain entry, shares must have been owned prior to 1 year from ex-date
@@ -1063,7 +1093,7 @@ public class REST extends Controller {
  				DateTime dt = formatter.parseDateTime(exdate);
  				querydate = dt.minusYears(1).toString(formatter);
  			}
- 			ps.setDate(3, java.sql.Date.valueOf(querydate));
+ 			ps.setDate(4, java.sql.Date.valueOf(querydate));
 
  			rs = ps.executeQuery();
 
@@ -1096,16 +1126,17 @@ public class REST extends Controller {
  			if(div_trade_id == 0) throw new Exception("ERROR: recordDividend() unable to determine dividend transaction id");  
  			
  	    	// insert dividend/st or lt gain paid record
- 			sql = "INSERT INTO portfolio.trades(id, portfolio_id, ticker,activity_type,activity_date,price,shares) VALUES (?,?,?,?,?,?,?)";
+ 			sql = "INSERT INTO portfolio.trades(id, portfolio_id, ticker,brokerage_id,activity_type,activity_date,price,shares) VALUES (?,?,?,?,?,?,?,?)";
  			
  			ps = con.prepareStatement(sql);
  			ps.setInt(1, div_trade_id);
  			ps.setInt(2, portfolioId);
  			ps.setString(3, ticker);
- 			ps.setString(4, type);
- 			ps.setDate(5, java.sql.Date.valueOf(paydate)); 			 			
- 			ps.setDouble(6, Double.parseDouble(divamount));
- 			ps.setDouble(7, shares_owned);
+ 			ps.setInt(4, Integer.parseInt(brokerage_id));
+ 			ps.setString(5, type);
+ 			ps.setDate(6, java.sql.Date.valueOf(paydate)); 			 			
+ 			ps.setDouble(7, Double.parseDouble(divamount));
+ 			ps.setDouble(8, shares_owned);
  			
  			ps.executeUpdate();
  			ps.close();
@@ -1119,15 +1150,16 @@ public class REST extends Controller {
  	    		double dripshares = (shares_owned * Double.parseDouble(divamount)) / Double.parseDouble(reinvestprice);
 		 	    Logger.info("Dividend re-invest shares purchased " + dripshares);
 		 	    
- 	 			sql = "INSERT INTO portfolio.trades(id,portfolio_id,ticker,activity_type,activity_date,price,shares) VALUES (?,?,?,'drip',?,?,?);";
+ 	 			sql = "INSERT INTO portfolio.trades(id,portfolio_id,ticker,brokerage_id,activity_type,activity_date,price,shares) VALUES (?,?,?,?,'drip',?,?,?);";
  	 			
  	 			ps = con.prepareStatement(sql);
  	 			ps.setInt(1, div_trade_id+1);
  	 			ps.setInt(2, portfolioId);
  	 			ps.setString(3, ticker);
- 	 			ps.setDate(4, java.sql.Date.valueOf(paydate)); 			 			
- 	 			ps.setDouble(5, Double.parseDouble(reinvestprice));
- 	 			ps.setDouble(6, dripshares);
+ 	 			ps.setInt(4, Integer.parseInt(brokerage_id));
+ 	 			ps.setDate(5, java.sql.Date.valueOf(paydate)); 			 			
+ 	 			ps.setDouble(6, Double.parseDouble(reinvestprice));
+ 	 			ps.setDouble(7, dripshares);
  	 			
  	 			ps.executeUpdate();
  	 			ps.close(); 	    		

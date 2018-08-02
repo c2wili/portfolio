@@ -99,8 +99,9 @@
 			    ,info:false
 				,lengthChange:false
 			    ,paginate:false
-			    ,scroller: true
+			    //,scroller: true
 			    ,scrollY: 440
+			    ,scrollX: true
 		        ,columns: [
 		            { data: "name", width: "300px" ,render: function ( data, type, row ) { var broker = (row.brokerage == "ETRADE") ? " (eTrade)": ""; return data + broker + "<i class='fa fa-list fa-lg ico-hist' aria-hidden='true'></i>" }},
 		            { data: "ticker" },		            
@@ -153,7 +154,7 @@
 		 	                return intVal(a) + intVal(b);
 		 	            }, 0);
 		 	       
-		 	         $(api.column(6).footer()).html( '$' + $.number(total2,2) );
+		 	         $(api.column(0).footer()).html( 'Total Value $' + $.number(total2,2) );
 		 	        
 
 			 	     divytd = api
@@ -207,7 +208,9 @@
 	    	
 	    	$('#overview tbody').on( 'click', 'i.ico-hist', function () {
 			     var data = overviewtable.row( $(this).parents('tr') ).data();
-			     console.log( "show history for " + data.id + " is " + data.name +"'s ticker is: "+ data.ticker );
+			     
+			     console.log( "show history for " + data.ticker );
+			     console.log(data)
 			     
 			     data.hnd = 'history';
 			     
@@ -234,6 +237,7 @@
 				        ,columns: [
 				        	{ data: "id", visible:false },
 				        	{ data: "ticker", visible:false },
+				        	{ data: "brokerage_id", visible:false },
 				            { data: "activity_date" },
 				            { data: "activity_type" },
 				            { data: "shares" , className: "dt-right",render: function ( data, type, row ) { if(data=='----') return data; else return $.number(data,4); } },
@@ -296,7 +300,8 @@
 				    	    callback: function (result) {
 				    	        if(result){
 				    	        	console.log( "trashing record for " + data.id + " ticker: " + data.ticker );
-				    	        	
+				    	        	console.log(data);
+				     
 				    	        	 // send delete to server
 									 $.getJSON( "rest?hnd=deletesingletransaction", data, function( resp ) {
 										 // reload the history table
@@ -319,14 +324,18 @@
 	    	$('#overview tbody').on( 'click', 'button', function () {
 			     var data = overviewtable.row( $(this).parents('tr') ).data();
 			     console.log( "holding " + data.id + " is " + data.name +"'s ticker is: "+ data.ticker );
+			     console.log(data)
 			     
 			     stock.id=data.id;
+			     stock.brokerage_id=data.brokerage_id;
 			     stock.name=data.name;
 			     stock.ticker=data.ticker;
-			     stock.shares=data.shares
+			     stock.shares=data.shares;
 			     
 			     var buysell = $(this).text();
-
+			     console.log(buysell)
+			     console.log(stock);
+			     
 			     //reset form
 			     if(buysell == "buy" || buysell == "sell"){
 			    	 
@@ -361,7 +370,9 @@
 		    	stock.date = dt;
 		    	stock.shares = shares;
 		    	stock.price = price;
-			
+		    	
+		    	console.log(stock)
+		    				
 				$.getJSON( "rest?hnd=addposition", stock, function( resp ) {				    
 				 	
 					// reset the stock object
@@ -417,7 +428,7 @@
 		    	
 		    	if(drip && reinvestprice == '') { alert('drip error'); return; }	
 		    	
-		    	var divstock = {id: stock.id, ticker:stock.ticker, type: type, exdate: exdt, paydate: paydt, divamount: divamt, drip: drip, reinvestprice: reinvestprice}
+		    	var divstock = {id: stock.id, ticker:stock.ticker, brokerage_id: stock.brokerage_id, type: type, exdate: exdt, paydate: paydt, divamount: divamt, drip: drip, reinvestprice: reinvestprice}
 		 
 				$.getJSON( "rest?hnd=recorddividend", divstock, function( resp ) {				    
 				 	
@@ -641,12 +652,12 @@
         <tbody></tbody>
         <tfoot>
           <tr>
+            <th style='text-align:right;'></th>
             <th></th>
             <th></th>
             <th></th>
             <th></th>
-            <th></th>
-          	<th>Total Value</th>
+          	<th></th>
             <th></th>
             <th></th>
             <th></th>
@@ -861,6 +872,7 @@
 	            <tr>
 	                <th>id</th>
 	                <th>holding id</th>
+	                <th>brokerage id</th>
 	                <th>date</th>
 	                <th>type</th>
 	                <th>shares</th>

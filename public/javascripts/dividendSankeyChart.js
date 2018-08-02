@@ -33,7 +33,6 @@ function buildSankeyChart( o, yr ){
 		sankeydata.push(tmpsankeydata[key]);
 	}
 	 
-	 
 	Highcharts.chart('sankey-chart', {
 		chart:{ 
             backgroundColor: '#f2f2f2'
