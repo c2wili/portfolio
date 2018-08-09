@@ -45,6 +45,12 @@
     .bootbox .modal-header{display:inline-block !important;}
     .bootbox .modal-title{font-size:1em; width:100%;}
     .bootbox .modal-header .close{padding:0; margin:0; float:right;}
+    
+    
+	.modal-lg {
+	    max-width: 1024px !important;
+	}
+
     </style>
 
 
@@ -55,10 +61,10 @@
     <script>
     
     function filterhistory(year){
-console.log('filter ' + year)
+
     	if(year == 0){
     		$('#history-table').DataTable()
-    		  .columns( 2 )
+    		  .columns( 3 )
     	      .search( '-' )
     	      .draw();
     	}
