@@ -55,7 +55,7 @@
     <script>
     
     function filterhistory(year){
-
+console.log('filter ' + year)
     	if(year == 0){
     		$('#history-table').DataTable()
     		  .columns( 2 )
@@ -64,7 +64,7 @@
     	}
     	else{    	
 	    	$('#history-table').DataTable()
-	    	    .columns( 2 )
+	    	    .columns( 3 )
 	    	    .search( year )
 	    	    .draw();
     	}
