@@ -640,11 +640,11 @@ public class REST extends Controller {
 	                     "\n ,SUM(CASE WHEN DATE_TRUNC('year',d.activity_date) = DATE_TRUNC('year', NOW()) THEN d.price*d.shares ELSE 0 END) div_ytd " +
 	                     "\n ,SUM(d.price*d.shares) div_all " +
 	                     "\n FROM( " +
-		                 "\n SELECT portfolio_id, name, ticker, brokerage_id, brokerage, divperiod, "+
+		                 "\n SELECT portfolio_id, name, ticker, brokerage_id, brokerage, divperiod,div_amt, "+
 					     "\n        SUM(shares_owned) AS shares,SUM(COALESCE(tot,0)) AS COST, " +
 					     "\n        CASE WHEN SUM(shares_owned)=0 THEN 0 else SUM(tot)/SUM(shares_owned) end AS avg_cost " +
 					     "\n FROM( " +
-					     "\n SELECT portfolio_id, name, brokerage_id, brokerage,ticker,divperiod, " +
+					     "\n SELECT portfolio_id, name, brokerage_id, brokerage,ticker,divperiod,div_amt, " +
 					     "\n    shares-shares_sold shares_owned, " +
 					     "\n    (shares-shares_sold)*price AS tot " +
 					     "\n FROM( " +
@@ -657,6 +657,7 @@ public class REST extends Controller {
 						 "\n        t.id as transaction_id, " +
 						 "\n        COALESCE(t.shares,0) shares,  " +
 						 "\n        t.price, " +
+						 "\n        dv.div_amt, " +
 						 "\n        SUM(COALESCE(s.shares,0)) AS shares_sold " +						 
 						 "\n FROM portfolio.holdings h " +
                          "\n join portfolio.brokerage b " + 
@@ -669,19 +670,29 @@ public class REST extends Controller {
 						 "\n LEFT OUTER JOIN portfolio.salesdetail s " +
 						 "\n   ON t.id = s.buy_trades_id " +
 						 "\n  AND t.portfolio_id = s.portfolio_id " +
+						 "\n LEFT OUTER JOIN ( " +
+						 "\n 	       SELECT ticker, price AS div_amt FROM( " +
+						 "\n 	       SELECT ticker " +
+						 "\n 	              ,price " +
+						 "\n 	              , ROW_NUMBER() over (partition BY ticker ORDER BY activity_date DESC) r " +
+						 "\n 	       FROM portfolio.trades  " +
+						 "\n 	       WHERE activity_type = 'dividend' " +
+						 "\n 	       ) sub WHERE r = 1 " +
+						 "\n 	  ) DV " +
+						 "\n 	  ON h.ticker = dv.ticker " +
 						 "\n WHERE h.portfolio_id = ? " +						 
-						 "\n GROUP BY 1,2,3,4,5,6,7,8,9 " +
+						 "\n GROUP BY 1,2,3,4,5,6,7,8,9,10 " +
 						 "\n )z " +
 						 "\n " + showzeroshares +
 						 "\n )y " + 
-						 "\n GROUP BY 1,2,3,4,5,6 " + 
+						 "\n GROUP BY 1,2,3,4,5,6,7 " + 
 						 "\n )x " + 
 						 "\n LEFT OUTER JOIN portfolio.trades d " + 
 						 "\n   ON x.ticker = d.ticker " +
 						 "\n  AND x.brokerage_id = d.brokerage_id " +
 						 "\n  AND x.portfolio_id = d.portfolio_id " +
 						 "\nAND d.activity_type in ('dividend','lt gain','st gain') " + 
-						 "\nGROUP BY 1,2,3,4,5,6,7,8,9  " +						 
+						 "\nGROUP BY 1,2,3,4,5,6,7,8,9,10  " +						 
 						 "\nORDER BY name";
 			
 			
