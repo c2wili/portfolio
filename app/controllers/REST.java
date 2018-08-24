@@ -252,17 +252,19 @@ public class REST extends Controller {
 			String sql = "\n SELECT t.*, h.sector, h.divperiod, c.shares as current_shares " +
 			             "\n FROM portfolio.trades t " +
 			             "\n LEFT OUTER JOIN ( " +
-			             "\n         SELECT ticker, " + 
+			             "\n         SELECT ticker,brokerage_id, " + 
 			             "\n                SUM(CASE WHEN activity_type = 'sell' THEN SHARES*-1 ELSE shares END) AS shares " +
 			             "\n         FROM PORTFOLIO.TRADES " +
 			             "\n         WHERE activity_type IN ('buy','sell','drip') " + 
 			             "\n           AND portfolio_id = ? " +
-			             "\n         GROUP BY 1 " +
+			             "\n         GROUP BY 1,2 " +
 			             "\n         )c " +
-			             "\n       ON t.ticker = c.ticker " + 					
+			             "\n       ON t.ticker = c.ticker " +
+			             "\n      AND t.brokerage_id = c.brokerage_id " +			
 			             "\n JOIN portfolio.holdings h " +
 			             "\n   ON t.ticker = h.ticker " +
 			             "\n  AND t.portfolio_id = h.portfolio_id " +
+			             "\n  AND t.brokerage_id = h.brokerage_id " +
 			             "\n WHERE t.activity_type in ('dividend','lt gain','st gain') " +
 			             "\n   AND t.portfolio_id = ? " +
 			             "\n ORDER BY t.ticker, t.activity_date ";

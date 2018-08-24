@@ -106,7 +106,7 @@
 				,lengthChange:false
 			    ,paginate:false
 			    //,scroller: true
-			    ,scrollY: 440
+			    ,scrollY: 495
 			    ,scrollX: true
 		        ,columns: [
 		            { data: "name", width: "300px" ,render: function ( data, type, row ) { var broker = (row.brokerage == "ETRADE") ? " (eTrade)": ""; return data + broker + "<i class='fa fa-list fa-lg ico-hist' aria-hidden='true'></i>" }},
@@ -660,7 +660,7 @@
             <th>Dividend YTD</th>
             <th>Dividends</th>
             <th>Multiple</th>
-            <th></th>            
+            <th style="text-align:right !important;">0 share tickers <input id="zerosharechk" type="checkbox"></th>            
           </tr>
         </thead>
         <tbody></tbody>
@@ -681,7 +681,7 @@
           </tr>
         </tfoot>        
       </table>
-          <input id="zerosharechk" type="checkbox"> Show holdings with 0 shares
+          
     </div>    
   </div><!-- row -->
   <div clas='row'>
