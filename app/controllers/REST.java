@@ -102,6 +102,13 @@ public class REST extends Controller {
     	else if(hnd.equals("getprices")){
     		updatePrices();
     	}
+    	else if(hnd.equals("gainloss")){
+    		getGainLossDetails();
+    	}    	
+    	
+    	else if(hnd.equals("newsummary")){
+    		newSummary();
+    	}       	
     	else{
     		throw new Exception("Handler value (" + hnd + ") is unrecognized.");
     	}    	    	   	
@@ -238,6 +245,82 @@ public class REST extends Controller {
 		}	
 	}
 
+	public static void getGainLossDetails()throws Exception {
+		
+		PreparedStatement ps = null;
+		Connection con = null;
+		ResultSet rs = null;
+	
+		JsonArray  jsonRows = new JsonArray();
+	
+		try {
+			con = HikariCP.getConnection();
+	
+			String sql = "\n SELECT ticker, CAST(activity_yyyy AS INT) as activity_yyyy, SUM(gainloss) as gainloss" +
+					     "\n FROM( " +
+					     "\n   SELECT t.ticker, DATE_PART('year', t.activity_date) AS activity_yyyy " +
+					     "\n          ,CASE WHEN t.activity_type IN ('dividend','lt gain','st gain') THEN t.shares*t.price " +
+					     "\n                WHEN t.activity_type = 'sell' THEN s.gain_loss  " +
+					     "\n            ELSE 0 " +
+					     "\n          END AS gainloss " + 
+					     "\n   FROM portfolio.trades t  " +
+					     "\n   LEFT OUTER JOIN portfolio.salesdetail s " +  
+					     "\n          ON t.id = s.trades_id   " +
+					     "\n   WHERE t.portfolio_id = ? " +
+					     "\n     AND t.activity_type IN ('sell','dividend','lt gain','st gain') " +
+					     "\n )z " +
+					     "\n GROUP BY activity_yyyy, ticker " +
+					     "\n ORDER BY activity_yyyy, ticker ";
+	
+			Logger.debug(sql);
+	
+			ps = con.prepareStatement(sql);
+			ps.setInt(1, portfolioId);
+	
+			rs = ps.executeQuery();
+	
+			while(rs.next()){
+	
+				JsonObject jsonRow = new JsonObject();
+	
+				String ticker = rs.getString("ticker").trim();
+				String activity_yyyy = rs.getString("activity_yyyy");
+				String gainloss = rs.getString("gainloss");
+	
+				//Logger.info(ticker);
+	
+				jsonRow.addProperty("ticker", ticker);
+				jsonRow.addProperty("activity_yyyy", activity_yyyy);
+				jsonRow.addProperty("gainloss", gainloss);
+	
+				jsonRows.add(jsonRow);
+	
+			}
+			ps.close();
+			rs.close();
+	
+			renderJSON(jsonRows.toString());
+	
+		} 
+		catch (Exception e) {
+			Logger.error("getGainLossDetails caught exception " + e.getMessage());
+			throw new Exception("ERROR: getGainLossDetails() " + e.getMessage());  
+		} 
+		finally {
+	
+			try {				
+				rs.close();
+				ps.close();
+				HikariCP.close();
+	
+				// use the Play connection close method !important
+				if(!con.isClosed()) con.close();
+			} catch (SQLException e) {
+		   	    Logger.error("getGainLossDetails: Error closing connection " + e.getMessage());
+			} 
+  	    }
+
+	}
 	public static void getDividendData()throws Exception {
 	
 		PreparedStatement ps = null;
@@ -1361,4 +1444,105 @@ public class REST extends Controller {
         }
     }
 
+    
+    
+    
+    public static void newSummary() throws Exception{
+    	
+		PreparedStatement ps = null;
+		Connection con = null;
+		ResultSet rs = null;
+	
+		JsonArray  jsonRows = new JsonArray();
+		
+		try {
+						
+			con = HikariCP.getConnection();
+			
+			String sql = " SELECT Z.PORTFOLIO_ID,SUM(Z.OWNED*PRICES2.PRICE) AS val FROM ( " +
+                         "\n SELECT t.portfolio_id " +
+                         "\n        ,t.ticker " +
+                         "\n        ,SUM(CASE WHEN activity_type = 'sell' THEN -1*shares ELSE shares END) AS OWNED " +
+                         "\n FROM portfolio.trades t " +
+                         "\n WHERE t.activity_type IN ('buy','sell','drip') " +
+                         "\n   AND t.portfolio_id IN (1,2) " +
+                         "\n GROUP BY 1,2 " +
+                         "\n )z " +
+                         "\n LEFT OUTER JOIN ( " +
+                         "\n SELECT * FROM " +
+                         "\n        (SELECT TICKER " +
+                         "\n                ,PRICE " +
+                         "\n                ,ROW_NUMBER() over (partition BY ticker ORDER BY ts DESC) R " +
+                         "\n         FROM portfolio.quote_hist " +
+                         "\n        )PRICES " +
+                         "\n        WHERE PRICES.R=1 " +
+                         "\n     )PRICES2 " +
+                         "\n    ON Z.TICKER = PRICES2.TICKER " +
+                         "\n WHERE OWNED > 0 " +
+                         "\n GROUP BY 1  ";			
+			
+			Logger.debug(sql);		
+			
+			ps = con.prepareStatement(sql);			
+			rs = ps.executeQuery();
+			
+			ResultSetMetaData rsMD = rs.getMetaData();
+			int colCount = rsMD.getColumnCount();
+			
+			while(rs.next()){
+				JsonObject jsonRow = new JsonObject();
+
+				for (int c = 1; c <= colCount; c++) {
+					String colHeader = rsMD.getColumnName(c);
+					
+					String colVal = "";
+					
+					try {
+						colVal = rs.getString(colHeader).trim();
+					} catch (Exception e) {
+						colVal = rs.getString(colHeader);
+					}
+					
+					if (colVal == null)
+						colVal = "";
+					
+					if(colVal.equals("")){
+						jsonRow.addProperty(colHeader, "");
+					}
+					else if(StringUtils.isNumeric(colVal)){
+						jsonRow.addProperty(colHeader, Integer.parseInt(colVal));
+					}
+					else if(StringUtils.isNumeric(colVal.replaceAll("\\.","")) && StringUtils.countMatches(colVal,".") <= 1 ){
+						jsonRow.addProperty(colHeader, Double.parseDouble(colVal));						
+					}
+					else{
+						jsonRow.addProperty(colHeader, colVal);
+					}
+				}
+
+				// add row to returning result set
+				jsonRows.add(jsonRow);				
+			}
+			
+			renderJSON(jsonRows);
+		
+		} 
+		catch (Exception e) {
+			Logger.error("getOverview caught exception " + e.getMessage());
+			throw new Exception("ERROR: getOverview() " + e.getMessage());  
+		} 
+		finally {
+			
+			try {				
+				rs.close();
+				ps.close();
+				HikariCP.close();
+				
+				// use the Play connection close method !important
+				if(!con.isClosed()) con.close();
+			} catch (SQLException e) {
+				Logger.error("getOverview: Error closing connection " + e.getMessage());
+			} 
+		}
+    }
 }

@@ -4,8 +4,9 @@
 
 # Home page
 GET     /portfolio                              Application.portfolio
+GET     /portfoliomobile                        Application.portfoliomobile
 GET     /dividends                              Application.dividends
-GET     /test                              Application.test
+GET     /test                                   Application.test
 
 *       /rest                                   REST.main
 

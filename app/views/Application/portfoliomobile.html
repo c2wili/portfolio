@@ -1,0 +1,190 @@
+<!DOCTYPE html> 
+<html>
+<head>
+	<title>Portfolio</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	#{stylesheet 'jquery.mobile-1.4.5.min.css' /}
+	#{stylesheet 'font-awesome-4.6.3/css/font-awesome.css' /}
+	
+	#{script 'jquery-1.12.4.min.js' /}
+	#{script 'jquery.mobile-1.4.5.min.js' /}
+	#{script 'jquery.number.min.js' /}
+	
+<style>
+
+.ui-overlay-a, .ui-page-theme-a, .ui-page-theme-a .ui-panel-wrapper {
+    background-color: #e9e9e9;
+}    
+.grp-hdr{font-size:17px; font-weight:bold;}
+.grp-subhdr{font-size:12px;}
+.grp-val{color:#0000ff; font-size:15px;}
+</style>
+
+
+<script>
+
+$( document ).ready(function() {	    	
+
+	// get summary data.
+	$.getJSON( "rest?hnd=newsummary", function( data ) {
+
+		console.log(data);
+		var total = 0;
+	    $.each( data, function( key, value ) {
+			if(value.portfolio_id == 1){
+				$("#taxable-value").text('$' + $.number(value.val,2))		
+			}	       
+			else if(value.portfolio_id == 2){
+				$("#retirement-value").text('$' + $.number(value.val,2))
+			}
+			
+			total+= value.val;
+	    });
+	    
+	    $("#total-value").text('$' + $.number(total,2))
+
+	});  
+	
+	
+	
+}); //end on ready
+</script>
+
+
+</head>
+
+<body>
+<!-- Start of first page -->
+<div data-role="page" id="foo">
+
+	<div data-role="header">	    
+		<h1>Foo</h1>
+	</div><!-- /header -->
+
+<!--
+	<div role="main" class="ui-content ">
+		<p>I'm first in the source order so I'm shown as the page.</p>
+		<p>View internal page called <a href="#bar">bar</a></p>
+		<p>View internal page called <a href="#mypanel">open panel</a></p>
+	</div> /content -->
+
+	<div role="main" class="ui-content" style=" background-color:#ffffff; margin:10px; ">
+		<span class='grp-hdr'>All Accounts</span><br/>
+		<span class='grp-subhdr'>Current Value</span><br/>
+		<span id="total-value" class='grp-val'>----</span>
+		<hr/>
+		<span class='grp-subhdr'>Total Profit: $----.--</span><br/>
+	</div><!-- /content -->
+
+	<div role="main" class="ui-content" style=" background-color:#ffffff; margin:10px; " onclick='$.mobile.navigate( "#taxable-summary" );'>
+		<span class='grp-hdr'>Taxable</span><br/>
+		<span class='grp-subhdr'>Current Value</span><br/>
+		<span id="taxable-value" class='grp-val'>----</span>
+		<hr/>
+		<span class='grp-subhdr'>Today's Profit: $----.--</span><br/>
+		<span class='grp-subhdr'>Total Profit: $----.--</span><br/>
+	</div><!-- /content -->
+
+	<div role="main" class="ui-content" style=" background-color:#ffffff; margin:10px; " onclick='$.mobile.navigate( "#retirement-summary" );'>
+		<span class='grp-hdr'>Retirement</span><br/>
+		<span class='grp-subhdr'>Current Value</span><br/>
+		<span id="retirement-value" class='grp-val'>----</span>
+		<hr/>
+		<span class='grp-subhdr'>Total Profit: $----.--</span><br/>
+	</div><!-- /content -->
+	
+
+</div><!-- /page -->
+
+<!-- Start of second page -->
+<div data-role="page" id="taxable-summary">
+
+	<div data-role="header" data-theme="a">    
+	    <a href="" class='fa fa-lg fa-arrow-left' aria-hidden='true' data-rel="back"></a>
+		<h1>Taxable Portfolio</h1>
+		<a href="#mypanel" class='fa fa-lg fa-bars' aria-hidden='true'></a>		
+	</div><!-- /header -->
+
+
+	<div data-role="panel" id="mypanel" data-display="overlay" data-position="right">
+	    <!-- panel content goes here -->	    
+	</div><!-- /panel -->
+
+	<div role="main" class="ui-content">
+		<p>I'm the second in the source order so I'm hidden when the page loads. I'm just shown if a link that references my id is beeing clicked.</p>
+		<p><a href="#foo">Back to foo</a></p>
+	</div><!-- /content -->
+
+	<div data-role="footer" data-position="fixed">
+		<div data-role="navbar">
+		<ul>
+			<li>			
+			<a href="#">
+			  <span class="ui-btn-inner">
+  			    <div class='fa fa-2x fa-plus-square'></div>
+			    <div class="ui-btn-text">Add New Holding</div>
+			  </span>
+			</a>
+			</li>
+			<li>			
+			<a href="#">
+			  <span class="ui-btn-inner">
+  			    <div class='fa fa-2x fa-money'></div>
+			    <div class="ui-btn-text">Update Prices</div>
+			  </span>
+			</a>
+			</li>
+ 
+		</ul>
+		</div><!-- /navbar -->
+	</div><!-- /footer -->
+</div><!-- /page -->
+
+
+
+<!-- Start of Third page -->
+<div data-role="page" id="retirement-summary">
+
+	<div data-role="header" data-theme="a">    
+	    <a href="" class='fa fa-lg fa-arrow-left' aria-hidden='true' data-rel="back"></a>
+		<h1>Retirement Accounts</h1>
+		<a href="#retirement-panel" class='fa fa-lg fa-bars' aria-hidden='true'></a>		
+	</div><!-- /header -->
+
+
+	<div data-role="retirement-panel" id="mypanel" data-display="overlay" data-position="right">
+	    <!-- panel content goes here -->	    
+	</div><!-- /panel -->
+
+	<div role="main" class="ui-content">
+		<p>I'm the second in the source order so I'm hidden when the page loads. I'm just shown if a link that references my id is beeing clicked.</p>
+		<p><a href="#foo">Back to foo</a></p>
+	</div><!-- /content -->
+
+	<div data-role="footer" data-position="fixed">
+		<div data-role="navbar">
+		<ul>
+			<li>			
+			<a href="#">
+			  <span class="ui-btn-inner">
+  			    <div class='fa fa-2x fa-plus-square'></div>
+			    <div class="ui-btn-text">Add New Holding</div>
+			  </span>
+			</a>
+			</li>
+			<li>			
+			<a href="#">
+			  <span class="ui-btn-inner">
+  			    <div class='fa fa-2x fa-money'></div>
+			    <div class="ui-btn-text">Update Prices</div>
+			  </span>
+			</a>
+			</li>
+ 
+		</ul>
+		</div><!-- /navbar -->
+	</div><!-- /footer -->
+</div><!-- /page -->
+
+</body>
+</html>

@@ -37,6 +37,10 @@ public class Application extends Controller {
     public static void portfolio() {
         render();
     }
+
+    public static void portfoliomobile() {
+        render();
+    }
   
     public static void dividends() {
         render();
