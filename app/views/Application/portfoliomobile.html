@@ -10,8 +10,11 @@
 	#{script 'jquery.mobile-1.4.5.min.js' /}
 	#{script 'jquery.number.min.js' /}
 	
+	#{script 'highcharts-6.1.0.js' /}
+	#{script 'summaryCharts.js' /}
+	
 <style>
-
+#all-accounts-pie{position:absolute; top:55px; left:255px; width:200px;}
 .ui-overlay-a, .ui-page-theme-a, .ui-page-theme-a .ui-panel-wrapper {
     background-color: #e9e9e9;
 }    
@@ -23,6 +26,10 @@
 
 <script>
 
+Highcharts.setOptions({
+    colors: [ '#50B432', '#058DC7', '#ED561B', '#DDDF00', '#24CBE5', '#64E572', '#FF9655', '#FFF263', '#6AF9C4']
+ });
+ 
 $( document ).ready(function() {	    	
 
 	// get summary data.
@@ -42,7 +49,9 @@ $( document ).ready(function() {
 	    });
 	    
 	    $("#total-value").text('$' + $.number(total,2))
-
+	    buildSummaryCharts();
+	    
+	    
 	});  
 	
 	
@@ -58,7 +67,7 @@ $( document ).ready(function() {
 <div data-role="page" id="foo">
 
 	<div data-role="header">	    
-		<h1>Foo</h1>
+		<h1>Portfolios</h1>
 	</div><!-- /header -->
 
 <!--
@@ -69,6 +78,7 @@ $( document ).ready(function() {
 	</div> /content -->
 
 	<div role="main" class="ui-content" style=" background-color:#ffffff; margin:10px; ">
+		<div id="all-accounts-pie"></div>
 		<span class='grp-hdr'>All Accounts</span><br/>
 		<span class='grp-subhdr'>Current Value</span><br/>
 		<span id="total-value" class='grp-val'>----</span>
