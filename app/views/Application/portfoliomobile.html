@@ -218,7 +218,7 @@ function loadPortfolio( id ){
 		var cost_basis = total_cost / current_shares;
 		var current_gain_loss = current_value - (current_shares *cost_basis);
 		var totalgain = current_gain_loss + dividend_gain;		
-		var cls_gain_loss = (current_gain_loss > 0) ? 'gain' : 'loss';
+		var cls_gain_loss = (current_gain_loss >= 0) ? 'gain' : 'loss';
 		 
 		/*
 		activity_date:"2018-02-15"
