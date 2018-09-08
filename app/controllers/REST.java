@@ -1464,6 +1464,7 @@ public class REST extends Controller {
                          "\n FROM portfolio.trades t  " +
                          "\n INNER JOIN portfolio.holdings h  " +
                          "\n         ON t.ticker = h.ticker  " +
+                         "\n        AND t.brokerage_id = h.brokerage_id " +
                          "\n LEFT OUTER JOIN portfolio.salesdetail s " + 
                          "\n         ON t.id = s.buy_trades_id  " +
                          "\n        AND t.portfolio_id = s.portfolio_id " +
