@@ -32,7 +32,7 @@ table td{
 font-family:sans-serif;
 font-size:12px;
 }
-.holding-value{
+.holding-value-loss{
 font-family:sans-serif;
 font-size:12px;
  border-radius: 5px; 
@@ -42,6 +42,19 @@ font-size:12px;
  width:80px;
  text-align:right;
  background-color:red;
+ color:#ffffff;
+ padding:4px;
+}
+.holding-value-gain{
+font-family:sans-serif;
+font-size:12px;
+ border-radius: 5px; 
+ box-shadow: 0 0 5px rgba(1, 1, 1, 0.7);
+ background-color: #FFFFFF;
+ height:42px;
+ width:80px;
+ text-align:right;
+ background-color:green;
  color:#ffffff;
  padding:4px;
 }
@@ -180,18 +193,24 @@ function loadPortfolio( id ){
 	$.each( p.holdings, function( index, rec ) {
 	
 		var company = "";
-		var current_shares = 0
+		var current_shares = 0;
+		var current_price = 0;
+		var cost_basis = 170;
+		
 		$.each( p.history, function( subindex, histrec ) {	
 			if(histrec.ticker != rec) return true; // aka... continue
 			company = histrec.company_name;
-			
+			if(rec == "AAPL") console.log(histrec);
 			if(histrec.activity_type == "buy" || histrec.activity_type == "drip"){
 				current_shares += histrec.shares - (histrec.shares_sold||0)		
 			}
+			current_price = histrec.current_price;
 		});
 		
-		
-		
+		var current_value = current_shares * current_price;
+		var cost = current_shares * cost_basis;
+		var current_gain_loss = current_value - (current_shares *cost_basis);
+		var cls_gain_loss = (current_gain_loss > 0) ? 'gain' : 'loss';
 		/*
 		activity_date:"2018-02-15"
 		activity_type:"buy"
@@ -209,8 +228,8 @@ function loadPortfolio( id ){
 					 '<table width="100%"><tr><td><span class="grp-hdr">' + rec + '</span><br/>' +
 					 '<span class="grp-subhdr" style="width:50px;">' + company + '</span>' +
 					 '</td>' + 
-					 '<td align="right" width="150">15.145 / $3,459.54<br/>224.260<br/>170.246</td>' +
-					 '<td align="right" width="100"> <div class="holding-value">$834.42<br/>4.25%<br/>123</div></td>' +
+					 '<td align="right" width="150">' + current_shares + ' / $' + $.number(current_value,2) + '<br/>224.260<br/>170.246</td>' +
+					 '<td align="right" width="100"> <div class="holding-value-' + cls_gain_loss + '">$' + $.number(current_gain_loss,2) + '<br/>4.25%<br/>123</div></td>' +
 					 '</tr></table>' +
 				     '</div>')
 		}
