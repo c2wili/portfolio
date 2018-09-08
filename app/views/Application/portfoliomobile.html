@@ -231,7 +231,7 @@ function loadPortfolio( id ){
 					 '<table width="100%"><tr><td><span class="grp-hdr">' + rec + '</span><br/>' +
 					 '<span class="grp-subhdr" style="width:50px;">' + company + '</span>' +
 					 '</td>' + 
-					 '<td align="right" width="150">' + current_shares + ' / $' + $.number(current_value,2) + '<br/>$' + $.number(current_price,2) + '<br/>$' + $.number(cost_basis,2) + '</td>' +
+					 '<td align="right" width="150">' + $.number(current_shares,4) + ' / $' + $.number(current_value,2) + '<br/>$' + $.number(current_price,2) + '<br/>$' + $.number(cost_basis,2) + '</td>' +
 					 '<td align="right" width="100"> <div class="holding-value-' + cls_gain_loss + '">$' + $.number(current_gain_loss,2) + '<br/>4.25%<br/>123</div></td>' +
 					 '</tr></table>' +
 				     '</div>')
