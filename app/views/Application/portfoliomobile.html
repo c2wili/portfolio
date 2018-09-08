@@ -198,6 +198,7 @@ function loadPortfolio( id ){
 		var current_shares = 0;
 		var current_price = 0;
 		var total_cost = 0;
+		var dividend_gain = 0;
 		$.each( p.history, function( subindex, histrec ) {	
 			if(histrec.ticker != rec) return true; // aka... continue
 			company = histrec.company_name;
@@ -206,6 +207,9 @@ function loadPortfolio( id ){
 				current_shares += histrec.shares - (histrec.shares_sold||0)	
 				total_cost += (histrec.shares - (histrec.shares_sold||0) ) * histrec.price
 			}
+			else if(histrec.activity_type == "dividend" ){
+				dividend_gain += histrec.shares * histrec.price;				
+			}
 			current_price = histrec.current_price;
 		});
 		
@@ -213,7 +217,9 @@ function loadPortfolio( id ){
 		var cost = current_shares * cost_basis;
 		var cost_basis = total_cost / current_shares;
 		var current_gain_loss = current_value - (current_shares *cost_basis);
+		var totalgain = current_gain_loss + dividend_gain;		
 		var cls_gain_loss = (current_gain_loss > 0) ? 'gain' : 'loss';
+		 
 		/*
 		activity_date:"2018-02-15"
 		activity_type:"buy"
@@ -232,7 +238,7 @@ function loadPortfolio( id ){
 					 '<span class="grp-subhdr" style="width:50px;">' + company + '</span>' +
 					 '</td>' + 
 					 '<td align="right" width="150">' + $.number(current_shares,4) + ' / $' + $.number(current_value,2) + '<br/>$' + $.number(current_price,2) + '<br/>$' + $.number(cost_basis,2) + '</td>' +
-					 '<td align="right" width="100"> <div class="holding-value-' + cls_gain_loss + '">$' + $.number(current_gain_loss,2) + '<br/>4.25%<br/>123</div></td>' +
+					 '<td align="right" width="100"> <div class="holding-value-' + cls_gain_loss + '">$' + $.number(current_gain_loss,2) + '<br/>$' + $.number(dividend_gain,2) + '<br/></div></td>' +
 					 '</tr></table>' +
 				     '</div>')
 		}
