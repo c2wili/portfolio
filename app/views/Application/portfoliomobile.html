@@ -136,12 +136,13 @@ $( document ).ready(function() {
 	    });
 	    
 	    $("#total-value").text('$' + $.number(totalValue,2));
-	    $("#total-realized-gain").text('Total Realized Gain: $' + $.number(totalGain,2))	
+	    $("#total-realized-gain").text('Total Gains: $' + $.number(totalGain,2))	
 
 		 	    
 	    buildSummaryCharts( portfolios );
 	    
-	    
+	   // loadPortfolio( 1 )
+	    //loadPortfolio( 2 )
 	});  
 	
 	
@@ -230,7 +231,7 @@ function loadPortfolio( id ){
 		<span class='grp-subhdr'>Current Value</span><br/>
 		<span id="total-value" class='grp-val'>----</span>
 		<hr/>
-		<span id="total-realized-gain" class='grp-subhdr'>Total Realized Gain: $----.--</span><br/>
+		<span id="total-realized-gain" class='grp-subhdr'>Total Gains: $----.--</span><br/>
 	</div><!-- /content -->
 
 
@@ -264,16 +265,41 @@ function loadPortfolio( id ){
 <div data-role="page" id="taxable-summary">
 
 	<div data-role="header" data-theme="a" data-position="fixed">    
-	    <a href="javascript:$.mobile.navigate( '#foo' );" class='fa fa-lg fa-arrow-left' aria-hidden='true'  ></a>
+	    <a href="javascript:$.mobile.navigate( '#foo' );" class='fa fa-lg fa-arrow-left' aria-hidden='true'></a>
 		<h1>Taxable Portfolio</h1>
 		<a href="#mypanel" class='fa fa-lg fa-bars' aria-hidden='true'></a>		
 	</div><!-- /header -->
 
+	<div data-role="tabs" id="tabs">
+	<div data-role="navbar">
+	  <div class="ui-grid-b ui-responsive">		
+		<div class="ui-block-a">&nbsp;</div>
+		<div class="ui-block-b" style="text-align:center;">
+		  <div data-role="controlgroup" data-type="horizontal" data-mini="true">
+		  <ul>
+		    <li><a href="#tab-taxable-holdings" class="ui-btn-active" data-ajax="false" data-role="button">holdings</a></li>
+		    <li><a href="#tab-taxable-dividends" data-ajax="false" data-role="button">dividends</a></li>
+          </ul>			  
+		  </div>
+		</div>
+		<div class="ui-block-c">&nbsp;</div>
+      </div>
+	</div>	
+	
+		<div id="tab-taxable-holdings" class="">
+			<div id="taxable-summary-content"></div>
+		</div>
+		<div id="tab-taxable-dividends" class="">
+			dividends :)
+		</div>
+		
+	</div>
+	
 	<div data-role="panel" id="mypanel" data-display="overlay" data-position="right">
 	    <!-- panel content goes here -->	    
 	</div><!-- /panel -->
 
-	<div id="taxable-summary-content"></div>
+	
 </div><!-- /page -->
 
 
@@ -294,8 +320,8 @@ function loadPortfolio( id ){
 		<div class="ui-block-b" style="text-align:center;">
 		  <div data-role="controlgroup" data-type="horizontal" data-mini="true">
 		  <ul>
-		    <li><a href="#one" class="ui-btn-active" data-ajax="false" data-role="button">holdings</a></li>
-		    <li><a href="#two" data-ajax="false" data-role="button">dividends</a></li>
+		    <li><a href="#tab-retirement-holdings" class="ui-btn-active" data-ajax="false" data-role="button">holdings</a></li>
+		    <li><a href="#tab-retirement-dividends" data-ajax="false" data-role="button">dividends</a></li>
           </ul>			  
 		  </div>
 		</div>
@@ -303,10 +329,10 @@ function loadPortfolio( id ){
       </div>
 	</div>	
 	
-		<div id="one" class="">
+		<div id="tab-retirement-holdings" class="">
 			<div id="retirement-summary-content"></div>
 		</div>
-		<div id="two" class="">
+		<div id="tab-retirement-dividends" class="">
 			dividends :)
 		</div>
 		
