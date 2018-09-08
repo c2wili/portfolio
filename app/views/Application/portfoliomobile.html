@@ -155,7 +155,11 @@ function loadPortfolio( id ){
 	var o = $("#" + p.name.toLowerCase() + "-summary-content");
 	o.empty();
 	
+	
 	$.mobile.navigate( "#" + p.name.toLowerCase() + "-summary" );
+	
+	$("#btn-taxable-holdings").addClass("ui-btn-active").click();
+	
 	
 	$.each( p.holdings, function( index, rec ) {
 	
@@ -277,8 +281,8 @@ function loadPortfolio( id ){
 		<div class="ui-block-b" style="text-align:center;">
 		  <div data-role="controlgroup" data-type="horizontal" data-mini="true">
 		  <ul>
-		    <li><a href="#tab-taxable-holdings" class="ui-btn-active" data-ajax="false" data-role="button">holdings</a></li>
-		    <li><a href="#tab-taxable-dividends" data-ajax="false" data-role="button">dividends</a></li>
+		    <li><a href="#tab-taxable-holdings" id='btn-taxable-holdings' class="ui-btn-active" data-ajax="false" data-role="button">holdings</a></li>
+		    <li><a href="#tab-taxable-dividends" id='btn-taxable-dividends' data-ajax="false" data-role="button">dividends</a></li>
           </ul>			  
 		  </div>
 		</div>
@@ -320,8 +324,8 @@ function loadPortfolio( id ){
 		<div class="ui-block-b" style="text-align:center;">
 		  <div data-role="controlgroup" data-type="horizontal" data-mini="true">
 		  <ul>
-		    <li><a href="#tab-retirement-holdings" class="ui-btn-active" data-ajax="false" data-role="button">holdings</a></li>
-		    <li><a href="#tab-retirement-dividends" data-ajax="false" data-role="button">dividends</a></li>
+		    <li><a href="#tab-retirement-holdings" id='btn-retirement-holdings' class="ui-btn-active" data-ajax="false" data-role="button">holdings</a></li>
+		    <li><a href="#tab-retirement-dividends" id='btn-retirement-holdings' data-ajax="false" data-role="button">dividends</a></li>
           </ul>			  
 		  </div>
 		</div>
