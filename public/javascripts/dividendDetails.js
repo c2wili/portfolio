@@ -1,7 +1,9 @@
-function loadDividendDetails( o, yr ){
+
+var currentSharesOwned = [];
+
+function parseDividends( o, yr ){
 	
-console.log("YEAR: " + yr)
-	var dividends = [];
+ 	var dividends = [];
 	var tickers = [];
 
 	var oDividend = [];
@@ -10,8 +12,7 @@ console.log("YEAR: " + yr)
 		oDividend.push({actual:0, projected:0, prioryear:0, paid:false});
 	}
 	
-	var currentSharesOwned = [];
-	
+		
     /* *********************************************************** */
     /* ************* remove in 2019 ****************************** */
     /* *********************************************************** */
@@ -66,7 +67,9 @@ console.log("YEAR: " + yr)
     
     console.log("***");
     console.log(dividends)
-    
+    return dividends;
+}    
+/* ***********************    
     // function to build projection for the month
 	function buildProjection(list){
 		
@@ -82,6 +85,12 @@ console.log("YEAR: " + yr)
 		
 		return returnTotal / totalNonZero;	    					
 	}
+**************/	
+    
+    
+function loadDividendDetails( o, yr ){    
+	
+	var dividends = parseDividends( o, yr )
 	
     for(key in dividends){   	
     	var rec = dividends[key];

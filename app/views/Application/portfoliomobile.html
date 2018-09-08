@@ -10,11 +10,17 @@
 	#{script 'jquery.mobile-1.4.5.min.js' /}
 	#{script 'jquery.number.min.js' /}
 	
+	#{script 'moment-2.15.1.min.js' /}
+	
 	#{script 'highcharts-6.1.0.js' /}
 	#{script 'summaryCharts.js' /}
+	#{script 'dividendDetails.js' /}
 	
 <style>
 #all-accounts-pie{position:absolute; top:55px; left:255px; width:200px;}
+#taxable-ytd-dividend-chart{position:absolute; top:196px; left:255px; width:200px;}
+#retirement-ytd-dividend-chart{position:absolute; top:379px; left:255px; width:200px;}
+.ui-content-stock{ background-color:#ffffff; margin:10px; padding:.5em; }
 .ui-overlay-a, .ui-page-theme-a, .ui-page-theme-a .ui-panel-wrapper {
     background-color: #e9e9e9;
 }    
@@ -30,26 +36,108 @@ Highcharts.setOptions({
     colors: [ '#50B432', '#058DC7', '#ED561B', '#DDDF00', '#24CBE5', '#64E572', '#FF9655', '#FFF263', '#6AF9C4']
  });
  
-$( document ).ready(function() {	    	
+var portfolios = [];
+portfolios[1] = {name: 'Taxable', holdings:[], history:[], current_value: 0, realized_gain_loss:0, dividends:0, dividends_ytd:0, dividends_pytd:0, dividends_py:0}
+portfolios[2] = {name: 'Retirement', holdings:[], history:[], current_value: 0, realized_gain_loss:0, dividends:0, dividends_ytd:0, dividends_pytd:0, dividends_py:0}
 
+var yr = moment().year();
+
+$( document ).ready(function() {	    	
+	
 	// get summary data.
 	$.getJSON( "rest?hnd=newsummary", function( data ) {
+ 
+		 
+		// get the total value for each portfolio
+	    $.each( data, function( index, rec ) {
+	    	
+	    	if(portfolios[rec.portfolio_id] == null) return true; // aka... continue
+	    	
+	    	var activity_date = moment(rec.activity_date);
+	    	
+	    	var p = portfolios[rec.portfolio_id];	    	
+	    	if( $.inArray(rec.ticker, p.holdings) === -1){
+	    		p.holdings.push(rec.ticker)	    		
+	    	}
+	    	
+	    	p.history.push(rec);
+	    	
+	    	if(rec.activity_type === "buy" || rec.activity_type === "drip"){
+	    		/*if(rec.ticker=="AAPL"){
+	    			console.log(rec.activity_type)
+	    			console.log(rec.shares)
+	    			console.log((rec.shares_sold||0))
+	    			console.log(rec.shares - (rec.shares_sold||0))
+	    			console.log((rec.shares - (rec.shares_sold || 0))* rec.current_price )
+	    		}
+	    		*/
 
-		console.log(data);
-		var total = 0;
-	    $.each( data, function( key, value ) {
-			if(value.portfolio_id == 1){
-				$("#taxable-value").text('$' + $.number(value.val,2))		
-			}	       
-			else if(value.portfolio_id == 2){
-				$("#retirement-value").text('$' + $.number(value.val,2))
-			}
-			
-			total+= value.val;
+	    		// determine current portfolio value
+	    		if( rec.shares - (rec.shares_sold || 0) > 0){
+	    			p.current_value += (rec.shares - (rec.shares_sold || 0)) * rec.current_price ;
+	    	    }
+	    		
+	    		//determine current portfolio total realized gain/loss from sales
+	    		p.realized_gain_loss += Number(rec.gain_loss|| 0);
+	    	}
+	    	else if(rec.activity_type === "dividend" || rec.activity_type === "st gain" || rec.activity_type === "lt gain"){
+	    		// add dividends to realized gain/loss 
+	    		p.realized_gain_loss += Number(rec.shares * rec.price);
+	    		p.dividends += Number(rec.shares * rec.price);
+	    		
+	    		// aggregate dividends ytd
+	    		if(activity_date.year() == yr){
+	    			p.dividends_ytd += Number(rec.shares * rec.price);
+	    		}
+	    		
+	    		// aggregate dividends prior ytd
+	    		if(activity_date.year() == yr-1){
+	    			p.dividends_py += Number(rec.shares * rec.price);
+	    			
+	    			if( activity_date <= moment().subtract(1, 'year').add()){
+		    			p.dividends_pytd += Number(rec.shares * rec.price);
+		    		}
+	    		}
+	    		
+	    	}
+	    	
+
+	    
+	    });
+		
+		var totalValue = 0;
+		var totalGain = 0;
+	    $.each( portfolios, function( index, rec ) {
+	    	
+	    	try{
+	    		totalValue+= rec.current_value
+	    		totalGain += rec.realized_gain_loss;
+	    		
+	    		$("#" + rec.name.toLowerCase() + "-value").text('$' + $.number(rec.current_value,2))
+	    		$("#" + rec.name.toLowerCase() + "-realized-gain").text('Total Realized Gain: $' + $.number(rec.realized_gain_loss,2))	
+	    		$("#" + rec.name.toLowerCase() + "-total-dividends").text('Total Dividends: $' + $.number(rec.dividends,2))
+	    		
+	    		var arr = "up";
+	    		var clr = "green";
+	    		var pct = (rec.dividends_ytd - rec.dividends_pytd) /rec.dividends_ytd * 100;
+	    		
+	    		if(rec.dividends_pytd > rec.dividends_ytd ){
+	    			arr = "down";
+	    			clr = "maroon";
+	    		}	    		
+
+	    		$("#" + rec.name.toLowerCase() + "-ytd-dividends").html('Total Dividends PY/YTD: $' + $.number(rec.dividends_pytd,2) +" / $" + $.number(rec.dividends_ytd,2) + " <i class='fa fa-arrow-up' style='position:relative; top:-1px; color:" + clr + ";' aria-hidden='true'>  "+ $.number(pct,2) + "%</i>  "   )
+	    	}
+	    	catch{}
+	    	
+	    	
 	    });
 	    
-	    $("#total-value").text('$' + $.number(total,2))
-	    buildSummaryCharts();
+	    $("#total-value").text('$' + $.number(totalValue,2));
+	    $("#total-realized-gain").text('Total Realized Gain: $' + $.number(totalGain,2))	
+
+		 	    
+	    buildSummaryCharts( portfolios );
 	    
 	    
 	});  
@@ -57,6 +145,63 @@ $( document ).ready(function() {
 	
 	
 }); //end on ready
+
+
+function loadPortfolio( id ){
+	var p = portfolios[id];
+	var o = $("#" + p.name.toLowerCase() + "-summary-content");
+	o.empty();
+	
+	$.mobile.navigate( "#" + p.name.toLowerCase() + "-summary" );
+	
+	$.each( p.holdings, function( index, rec ) {
+	
+		var company = "";
+		var current_shares = 0
+		$.each( p.history, function( subindex, histrec ) {	
+			if(histrec.ticker != rec) return true; // aka... continue
+			company = histrec.company_name;
+			
+			if(histrec.activity_type == "buy" || histrec.activity_type == "drip"){
+				current_shares += histrec.shares - (histrec.shares_sold||0)		
+			}
+		});
+		/*
+		activity_date:"2018-02-15"
+		activity_type:"buy"
+		brokerage_id:1
+		current_price:216.05
+		gain_loss:94.9456
+		portfolio_id:1
+		price:171.6399
+		shares:19
+		shares_sold:4
+		ticker:"AAPL"
+		*/	
+		if(current_shares > 0){
+			o.append('<div role="main" class="ui-content-stock" >' +
+					 '<span class="grp-hdr">' + rec + '</span><br/>' +
+					 '<span class="grp-subhdr" style="width:50px;">' + company + '</span><br/>' +
+				     '</div>')
+		}
+	});
+	
+	/*
+		<div role="main" class="ui-content-stock" >
+		<span class='grp-hdr'>AAPL</span><br/>
+		<span class='grp-subhdr'>Apple</span><br/>
+	</div> 
+	<div role="main" class="ui-content-stock"" >
+		<span class='grp-hdr'>T</span><br/>
+		<span class='grp-subhdr'>AT&T</span><br/>
+	</div><!-- /content -->
+	<div role="main" class="ui-content-stock" >
+		<span class='grp-hdr'>WM</span><br/>
+		<span class='grp-subhdr'>Waste Management</span><br/>
+	</div><!-- /content -->
+	*/
+	
+}
 </script>
 
 
@@ -83,24 +228,31 @@ $( document ).ready(function() {
 		<span class='grp-subhdr'>Current Value</span><br/>
 		<span id="total-value" class='grp-val'>----</span>
 		<hr/>
-		<span class='grp-subhdr'>Total Profit: $----.--</span><br/>
+		<span id="total-realized-gain" class='grp-subhdr'>Total Realized Gain: $----.--</span><br/>
 	</div><!-- /content -->
 
-	<div role="main" class="ui-content" style=" background-color:#ffffff; margin:10px; " onclick='$.mobile.navigate( "#taxable-summary" );'>
+
+
+	<div role="main" class="ui-content" style=" background-color:#ffffff; margin:10px; " onclick='javascript:loadPortfolio(1);'>
+	    <div id="taxable-ytd-dividend-chart"></div>
 		<span class='grp-hdr'>Taxable</span><br/>
 		<span class='grp-subhdr'>Current Value</span><br/>
 		<span id="taxable-value" class='grp-val'>----</span>
 		<hr/>
-		<span class='grp-subhdr'>Today's Profit: $----.--</span><br/>
-		<span class='grp-subhdr'>Total Profit: $----.--</span><br/>
+		<span id="taxable-realized-gain" class='grp-subhdr'>Total Realized Gain: $----.--</span><br/>
+		<span id="taxable-total-dividends" class='grp-subhdr'>Total Dividends: $----.--</span><br/>
+		<span id="taxable-ytd-dividends" class='grp-subhdr'>Total Dividends PY/YTD: $----.--/$----.--</span><br/>
 	</div><!-- /content -->
 
-	<div role="main" class="ui-content" style=" background-color:#ffffff; margin:10px; " onclick='$.mobile.navigate( "#retirement-summary" );'>
+	<div role="main" class="ui-content" style=" background-color:#ffffff; margin:10px; " onclick='javascript:loadPortfolio(2);'>
+	    <div id="retirement-ytd-dividend-chart"></div>
 		<span class='grp-hdr'>Retirement</span><br/>
 		<span class='grp-subhdr'>Current Value</span><br/>
 		<span id="retirement-value" class='grp-val'>----</span>
 		<hr/>
-		<span class='grp-subhdr'>Total Profit: $----.--</span><br/>
+		<span id="retirement-realized-gain"class='grp-subhdr'>Total Realized Gain: $----.--</span><br/>
+		<span id="retirement-total-dividends" class='grp-subhdr'>Total Dividends: $----.--</span><br/>
+		<span id="retirement-ytd-dividends" class='grp-subhdr'>Total Dividends PY/YTD: $----.--/$----.--</span><br/>
 	</div><!-- /content -->
 	
 
@@ -109,45 +261,17 @@ $( document ).ready(function() {
 <!-- Start of second page -->
 <div data-role="page" id="taxable-summary">
 
-	<div data-role="header" data-theme="a">    
+	<div data-role="header" data-theme="a" data-position="fixed">    
 	    <a href="" class='fa fa-lg fa-arrow-left' aria-hidden='true' data-rel="back"></a>
 		<h1>Taxable Portfolio</h1>
 		<a href="#mypanel" class='fa fa-lg fa-bars' aria-hidden='true'></a>		
 	</div><!-- /header -->
 
-
 	<div data-role="panel" id="mypanel" data-display="overlay" data-position="right">
 	    <!-- panel content goes here -->	    
 	</div><!-- /panel -->
 
-	<div role="main" class="ui-content">
-		<p>I'm the second in the source order so I'm hidden when the page loads. I'm just shown if a link that references my id is beeing clicked.</p>
-		<p><a href="#foo">Back to foo</a></p>
-	</div><!-- /content -->
-
-	<div data-role="footer" data-position="fixed">
-		<div data-role="navbar">
-		<ul>
-			<li>			
-			<a href="#">
-			  <span class="ui-btn-inner">
-  			    <div class='fa fa-2x fa-plus-square'></div>
-			    <div class="ui-btn-text">Add New Holding</div>
-			  </span>
-			</a>
-			</li>
-			<li>			
-			<a href="#">
-			  <span class="ui-btn-inner">
-  			    <div class='fa fa-2x fa-money'></div>
-			    <div class="ui-btn-text">Update Prices</div>
-			  </span>
-			</a>
-			</li>
- 
-		</ul>
-		</div><!-- /navbar -->
-	</div><!-- /footer -->
+	<div id="taxable-summary-content"></div>
 </div><!-- /page -->
 
 
@@ -155,22 +279,37 @@ $( document ).ready(function() {
 <!-- Start of Third page -->
 <div data-role="page" id="retirement-summary">
 
-	<div data-role="header" data-theme="a">    
+	<div data-role="header" data-theme="a" data-position="fixed">    
 	    <a href="" class='fa fa-lg fa-arrow-left' aria-hidden='true' data-rel="back"></a>
 		<h1>Retirement Accounts</h1>
 		<a href="#retirement-panel" class='fa fa-lg fa-bars' aria-hidden='true'></a>		
 	</div><!-- /header -->
 
-
+	<div data-role="tabs" id="tabs" data-position="fixed">
+		<div data-role="navbar">
+			<ul>
+			  <li><a href="#one" data-ajax="false">holdings</a></li>
+			  <li><a href="#two" data-ajax="false">dividends</a></li>
+			</ul>			 
+		</div>	
+		<div id="one" class="ui-body-d ui-content">
+			<div id="retirement-summary-content"></div>
+		</div>
+		<div id="two" class="ui-body-d ui-content">
+			dividends :)
+		</div>
+		
+	</div>
+	
 	<div data-role="retirement-panel" id="mypanel" data-display="overlay" data-position="right">
 	    <!-- panel content goes here -->	    
-	</div><!-- /panel -->
+	</div> 
 
-	<div role="main" class="ui-content">
-		<p>I'm the second in the source order so I'm hidden when the page loads. I'm just shown if a link that references my id is beeing clicked.</p>
-		<p><a href="#foo">Back to foo</a></p>
-	</div><!-- /content -->
+	
 
+
+	
+	
 	<div data-role="footer" data-position="fixed">
 		<div data-role="navbar">
 		<ul>

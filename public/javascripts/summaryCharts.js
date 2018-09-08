@@ -1,7 +1,8 @@
 
 
-function buildSummaryCharts(){
+function buildSummaryCharts( portfolios ){
 	
+ 
 	Highcharts.chart('all-accounts-pie', {
 		 chart: {
             type:'pie',
@@ -23,8 +24,8 @@ function buildSummaryCharts(){
        },
        tooltip: {
            formatter: function () {
-               return '<b>' + this.x + ' ' + this.series.name + '<br/> $' +
-                    + this.y.toFixed(2) + '</b>';
+        	   console.log(this)
+               return '<b>' + this.key + '<br/> $' + $.number(this.y,2) + '</b>';
            }
        },
        plotOptions: {
@@ -42,15 +43,149 @@ function buildSummaryCharts(){
            }
        },
        series: [{
-           name: 'Brands',
+           name: 'Accounts',
            colorByPoint: true,
            data: [ {
-               name: 'QQ',
-               y: 1.2
+               name: 'Taxable',
+               y: portfolios[1].current_value
            }, {
-               name: 'Other',
-               y: 2.61
+               name: 'Retirement',
+               y:  portfolios[2].current_value
            }]
        }]
+	});	
+	
+	console.log(portfolios)
+	
+	Highcharts.chart('taxable-ytd-dividend-chart', {
+		 chart: {
+              type:'column',
+              height:90,
+              width:100 ,
+              backgroundColor: 'transparent'
+
+		 },
+        title: {
+            text: ''
+        },
+        subtitle: {
+            text: ''
+        },
+        legend: {
+        	borderWidth: 0
+        },
+        credits:{
+        	enabled: false
+        },
+        tooltip: {
+            formatter: function () {
+           	 
+                return '<b>' + this.series.name + ' YTD<br/> $' +
+                     + this.y.toFixed(2) + '</b>';
+            }
+        },
+        xAxis: {
+        	visible:false,
+            categories: [
+                ''
+            ],
+            crosshair: true
+        },
+	     yAxis: [{
+	       visible:false,
+		   tickInterval: 50,
+		   title: {
+		       text: null
+		   },
+		   labels: {
+			   formatter: function () {
+			   	  return '$' + $.number(this.value);
+		       }
+	  	   }
+	      }
+	    ],
+	    legend: {
+	        enabled: false
+	    },
+	    plotOptions: {
+	    	column: {
+	            borderRadius: 5,
+	            pointWidth: 25
+	        }
+	    },
+	     
+		series:[{
+	        name: yr -1,
+	        data: [ portfolios[1].dividends_pytd]
+	    },{
+	        name: yr,
+	        data: [ portfolios[1].dividends_ytd] 
+	    }]
+	});	
+	
+	Highcharts.chart('retirement-ytd-dividend-chart', {
+		 chart: {
+             type:'column',
+             height:90,
+             width:100 ,
+             backgroundColor: 'transparent'
+
+		 },
+       title: {
+           text: ''
+       },
+       subtitle: {
+           text: ''
+       },
+       legend: {
+       	borderWidth: 0
+       },
+       credits:{
+       	enabled: false
+       },
+       tooltip: {
+           formatter: function () {
+          	 
+               return '<b>' + this.series.name + ' YTD<br/> $' +
+                    + this.y.toFixed(2) + '</b>';
+           }
+       },
+       xAxis: {
+    	   visible:false,
+           categories: [
+               ''
+           ],
+           crosshair: true
+       },
+	     yAxis: [{
+	       visible:false,
+		   tickInterval: 50,
+		   title: {
+		       text: null
+		   },
+		   labels: {
+			   formatter: function () {
+			   	  return '$' + $.number(this.value);
+		       }
+	  	   }
+	      }
+	    ],
+	    legend: {
+	        enabled: false
+	    },
+	    plotOptions: {
+	    	column: {
+	            borderRadius: 5,
+	            pointWidth: 25
+	        }
+	    },
+	     
+		series:[{
+	        name: yr -1,
+	        data: [ portfolios[2].dividends_pytd]
+	    },{
+	        name: yr,
+	        data: [ portfolios[2].dividends_ytd] 
+	    }]
 	});	
 }

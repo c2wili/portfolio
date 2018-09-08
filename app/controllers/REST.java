@@ -1459,27 +1459,16 @@ public class REST extends Controller {
 						
 			con = HikariCP.getConnection();
 			
-			String sql = " SELECT Z.PORTFOLIO_ID,SUM(Z.OWNED*PRICES2.PRICE) AS val FROM ( " +
-                         "\n SELECT t.portfolio_id " +
-                         "\n        ,t.ticker " +
-                         "\n        ,SUM(CASE WHEN activity_type = 'sell' THEN -1*shares ELSE shares END) AS OWNED " +
-                         "\n FROM portfolio.trades t " +
-                         "\n WHERE t.activity_type IN ('buy','sell','drip') " +
-                         "\n   AND t.portfolio_id IN (1,2) " +
-                         "\n GROUP BY 1,2 " +
-                         "\n )z " +
-                         "\n LEFT OUTER JOIN ( " +
-                         "\n SELECT * FROM " +
-                         "\n        (SELECT TICKER " +
-                         "\n                ,PRICE " +
-                         "\n                ,ROW_NUMBER() over (partition BY ticker ORDER BY ts DESC) R " +
-                         "\n         FROM portfolio.quote_hist " +
-                         "\n        )PRICES " +
-                         "\n        WHERE PRICES.R=1 " +
-                         "\n     )PRICES2 " +
-                         "\n    ON Z.TICKER = PRICES2.TICKER " +
-                         "\n WHERE OWNED > 0 " +
-                         "\n GROUP BY 1  ";			
+			String sql = "  SELECT t.portfolio_id,t.ticker,t.brokerage_id,t.activity_type,t.activity_date,t.price,t.shares,h.name as company_name " +
+                         "\n       ,SUM(s.shares) AS shares_sold, SUM(s.gain_loss) as gain_loss " +
+                         "\n FROM portfolio.trades t  " +
+                         "\n INNER JOIN portfolio.holdings h  " +
+                         "\n         ON t.ticker = h.ticker  " +
+                         "\n LEFT OUTER JOIN portfolio.salesdetail s " + 
+                         "\n         ON t.id = s.buy_trades_id  " +
+                         "\n        AND t.portfolio_id = s.portfolio_id " +
+                         "\n GROUP BY 1,2,3,4,5,6,7,8 " +			
+                         "\n ORDER BY 1,2,5  ";			
 			
 			Logger.debug(sql);		
 			
@@ -1488,7 +1477,12 @@ public class REST extends Controller {
 			
 			ResultSetMetaData rsMD = rs.getMetaData();
 			int colCount = rsMD.getColumnCount();
-			
+
+			HashMap sessionHash = Cache.get(session.getId(), HashMap.class);			
+			HashMap quotes = (HashMap) sessionHash.get("quotes");
+						
+			System.out.println(quotes);
+						
 			while(rs.next()){
 				JsonObject jsonRow = new JsonObject();
 
@@ -1518,6 +1512,11 @@ public class REST extends Controller {
 					else{
 						jsonRow.addProperty(colHeader, colVal);
 					}
+				}
+				
+				if(quotes.containsKey(jsonRow.get("ticker").getAsString())){
+				    double price = ((Quote)(quotes.get(jsonRow.get("ticker").getAsString()))).getPrice();
+					jsonRow.addProperty("current_price", price );
 				}
 
 				// add row to returning result set
