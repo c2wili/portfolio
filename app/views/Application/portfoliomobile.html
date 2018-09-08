@@ -27,6 +27,8 @@
 .grp-hdr{font-size:17px; font-weight:bold;}
 .grp-subhdr{font-size:12px;}
 .grp-val{color:#0000ff; font-size:15px;}
+
+
 </style>
 
 
@@ -262,7 +264,7 @@ function loadPortfolio( id ){
 <div data-role="page" id="taxable-summary">
 
 	<div data-role="header" data-theme="a" data-position="fixed">    
-	    <a href="" class='fa fa-lg fa-arrow-left' aria-hidden='true' data-rel="back"></a>
+	    <a href="javascript:$.mobile.navigate( '#foo' );" class='fa fa-lg fa-arrow-left' aria-hidden='true'  ></a>
 		<h1>Taxable Portfolio</h1>
 		<a href="#mypanel" class='fa fa-lg fa-bars' aria-hidden='true'></a>		
 	</div><!-- /header -->
@@ -280,22 +282,31 @@ function loadPortfolio( id ){
 <div data-role="page" id="retirement-summary">
 
 	<div data-role="header" data-theme="a" data-position="fixed">    
-	    <a href="" class='fa fa-lg fa-arrow-left' aria-hidden='true' data-rel="back"></a>
+	    <a href="javascript:$.mobile.navigate( '#foo' );" class='fa fa-lg fa-arrow-left' aria-hidden='true'></a>
 		<h1>Retirement Accounts</h1>
 		<a href="#retirement-panel" class='fa fa-lg fa-bars' aria-hidden='true'></a>		
 	</div><!-- /header -->
 
-	<div data-role="tabs" id="tabs" data-position="fixed">
-		<div data-role="navbar">
-			<ul>
-			  <li><a href="#one" data-ajax="false">holdings</a></li>
-			  <li><a href="#two" data-ajax="false">dividends</a></li>
-			</ul>			 
-		</div>	
-		<div id="one" class="ui-body-d ui-content">
+	<div data-role="tabs" id="tabs">
+	<div data-role="navbar">
+	  <div class="ui-grid-b ui-responsive">		
+		<div class="ui-block-a">&nbsp;</div>
+		<div class="ui-block-b" style="text-align:center;">
+		  <div data-role="controlgroup" data-type="horizontal" data-mini="true">
+		  <ul>
+		    <li><a href="#one" class="ui-btn-active" data-ajax="false" data-role="button">holdings</a></li>
+		    <li><a href="#two" data-ajax="false" data-role="button">dividends</a></li>
+          </ul>			  
+		  </div>
+		</div>
+		<div class="ui-block-c">&nbsp;</div>
+      </div>
+	</div>	
+	
+		<div id="one" class="">
 			<div id="retirement-summary-content"></div>
 		</div>
-		<div id="two" class="ui-body-d ui-content">
+		<div id="two" class="">
 			dividends :)
 		</div>
 		
