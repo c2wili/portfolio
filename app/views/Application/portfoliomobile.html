@@ -158,7 +158,7 @@ function loadPortfolio( id ){
 	
 	$.mobile.navigate( "#" + p.name.toLowerCase() + "-summary" );
 	
-	$("#btn-taxable-holdings").addClass("ui-btn-active").click();
+	$("#btn-" + p.name.toLowerCase() + "-holdings").addClass("ui-btn-active").click();
 	
 	
 	$.each( p.holdings, function( index, rec ) {
