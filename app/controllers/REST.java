@@ -1459,8 +1459,8 @@ public class REST extends Controller {
 						
 			con = HikariCP.getConnection();
 			
-			String sql = "  SELECT t.portfolio_id,t.ticker,t.brokerage_id,t.activity_type,t.activity_date,t.price,t.shares,h.name as company_name " +
-                         "\n       ,SUM(s.shares) AS shares_sold, SUM(s.gain_loss) as gain_loss " +
+			String sql = "  SELECT t.portfolio_id,t.activity_date, t.brokerage_id, t.ticker, t.activity_type,t.price,t.shares,h.name as company_name, t.id " +
+                         "\n       ,SUM(s.shares) AS shares_sold, coalesce(SUM(s.gain_loss),0) as gain_loss " +
                          "\n FROM portfolio.trades t  " +
                          "\n INNER JOIN portfolio.holdings h  " +
                          "\n         ON t.ticker = h.ticker  " +
@@ -1468,8 +1468,9 @@ public class REST extends Controller {
                          "\n LEFT OUTER JOIN portfolio.salesdetail s " + 
                          "\n         ON t.id = s.buy_trades_id  " +
                          "\n        AND t.portfolio_id = s.portfolio_id " +
-                         "\n GROUP BY 1,2,3,4,5,6,7,8 " +			
-                         "\n ORDER BY 1,2,5  ";			
+                         "\n GROUP BY 1,2,3,4,5,6,7,8,9  " +			
+                         "\n ORDER BY 1,2,5,4,10  ";
+                         			
 			
 			Logger.debug(sql);		
 			

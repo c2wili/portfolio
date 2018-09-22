@@ -5,16 +5,18 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	#{stylesheet 'jquery.mobile-1.4.5.min.css' /}
 	#{stylesheet 'font-awesome-4.6.3/css/font-awesome.css' /}
+	#{stylesheet 'jquery.dataTables.css' /}
 	
 	#{script 'jquery-1.12.4.min.js' /}
 	#{script 'jquery.mobile-1.4.5.min.js' /}
 	#{script 'jquery.number.min.js' /}
-	
+	#{script 'DataTables-1.10.12/media/js/jquery.dataTables.min.js' /}
+		
 	#{script 'moment-2.15.1.min.js' /}
 	
 	#{script 'highcharts-6.1.0.js' /}
 	#{script 'summaryCharts.js' /}
-	#{script 'dividendDetails.js' /}
+	
 	
 <style>
 #all-accounts-pie{position:absolute; top:55px; left:255px; width:200px;}
@@ -60,6 +62,8 @@ background-image: linear-gradient(-60deg, #00721c 0%, #a4c1ab 100%);
  
  
 }
+
+
 </style>
 
 
@@ -69,116 +73,402 @@ Highcharts.setOptions({
     colors: [ '#50B432', '#058DC7', '#ED561B', '#DDDF00', '#24CBE5', '#64E572', '#FF9655', '#FFF263', '#6AF9C4']
  });
  
-var portfolios = [];
-portfolios[1] = {name: 'Taxable', holdings:[], history:[], current_value: 0, realized_gain_loss:0, dividends:0, dividends_ytd:0, dividends_pytd:0, dividends_py:0}
-portfolios[2] = {name: 'Retirement', holdings:[], history:[], current_value: 0, realized_gain_loss:0, dividends:0, dividends_ytd:0, dividends_pytd:0, dividends_py:0}
+ 
+function Holding( _ticker ){
+    this.ticker = _ticker;
+    this.company = "";
+    this.brokerage = 0;
+    this.shares_owned = 0;
+    this.current_price = 0;
+    this.history = [];
+    this.gain_loss = 0;
+    this.cost_basis = 0;
+    
+    this.updateCostBasis = function (){
+    	
+		var so = 0;
+		var cb = 0;
+		
+    	$.each( $this.history, function( index, histrec ) {
+    		
+    		if(histrec.activity_type == "buy" || histrec.activity_type == "drip"){    	
+	    		if($this.cost_basis == 0){
+	    			cb = histrec.price;
+	    		}
+	    		else{
+	    			
+	    			cb = ( ( so * cb ) + ( ( histrec.shares - histrec.shares_sold ) * histrec.price ) )
+	    			      /
+	    			     ( so + ( histrec.shares - histrec.shares_sold ) )
+	    		}
+	    		
+    			so += histrec.shares;
+    		}
+    	});
+    	
+    	this.cost_basis = cb;    	
+    }
+    
+    this.addToPosition = function( histrec ){
+    	
+    	histrec.shares_sold = 0;
+     	
+    	// add shares to overall shares owned
+    	this.shares_owned+= histrec.shares;
+    }
+    
+    this.sellPosition = function( histrec ){
+     	
+    	// if this sale is all shares, update values
+		if(this.shares_owned.toFixed(4) == histrec.shares.toFixed(4) || histrec.shares > this.shares_owned ){
+			this.shares_owned = 0;
 
+		    $.each( this.history, function( index, hr ) {
+		    	// update all history records shares_sold 
+		    	if(hr.activity_type == "buy" || hr.activity_type == "drip"){
+					hr.shares_sold = hr.shares
+		    	}
+		    });
+		}
+		else{
+		    // subtract sold shares from position
+		    this.shares_owned-= histrec.shares;
+    				    
+		    // update the shares_sold for history record using FIFO
+		    var ss = histrec.shares;    		    
+		    $.each( this.history, function( index, hr ) {
+		    	
+		    	if(hr.activity_type == "buy" || hr.activity_type == "drip"){
+    		    	
+		    		// all shares for this buy record have been sold, move on to the next one
+		    		if(hr.shares_sold == hr.shares)  return true;
+		    		
+		    		// sold more shares so this entire buy record is covered
+		    		if(ss >= ( hr.shares - hr.shares_sold ) ){
+						hr.shares_sold = hr.shares;
+						ss -= hr.shares;
+					}    		    	
+		    		else{
+						hr.shares_sold = ss;    		    			
+		    		}
+		    	}
+		    });		    
+		}
+    }
+    
+    this.addHistory = function( histrec ){
+    	
+    	this.history.push(histrec);
+    	
+    	var disp = (histrec.ticker == "OGE") ? true : false;
+
+    	this.current_price = histrec.current_price || 0;
+    	this.company = histrec.company_name;
+    	this.brokerage = histrec.brokerage_id;
+ 
+    	if(histrec.activity_type == "buy" || histrec.activity_type == "drip"){    		
+    		this.addToPosition( histrec );
+    		this.gain_loss+= histrec.gain_loss;
+    	}
+    	else if(histrec.activity_type == "dividend" || histrec.activity_type == "lt gain" || histrec.activity_type == "st gain"){
+    		// add capital gains to overall gain loss.
+    		this.gain_loss+=histrec.shares*histrec.price;
+    	}
+    	else if(histrec.activity_type == "sell"){    		
+    		this.sellPosition( histrec );
+    	}
+    	
+    	if(disp) console.log(this.toString())
+
+    }
+ 
+    
+    this.getValue = function(){       
+    	//console.log(this.toString());
+    	
+    	if(this.shares_owned === 0) return 0;
+    	//console.log(this.ticker +" get value " + this.shares_owned + " : " + this.current_price + " : " + (this.shares_owned * this.current_price))
+    	return this.shares_owned * this.current_price;
+    }     
+    
+    this.getDividend = function( date_or_year ){
+    	return this.getGain( date_or_year, true );
+    }
+    
+    this.getGain = function( date_or_year, divonly ){ 
+    	
+    	var start_date = "";
+    	var end_date = "";
+    	
+    	// get all dividends ever paid
+    	if(date_or_year == null) {
+    		start_date = "1900-01-01";
+    		end_date = "2999-12-31";
+    		date_or_year = "*";
+    	}
+    	
+    	if(typeof date_or_year === 'object'){
+    		date_or_year = date_or_year.format("YYYY-MM-DD");
+    	}
+    	
+    	if(date_or_year.toString().length == 4){
+    		start_date = date_or_year + "-01-01";
+    		end_date = date_or_year + "-12-31";
+    	}
+    	
+    	if(date_or_year.toString().length == 10){
+    		start_date = moment(date_or_year).startOf('year').format("YYYY-MM-DD");
+    		end_date = date_or_year;
+    	}
+    	
+    	start_date = moment(start_date);
+    	end_date = moment(end_date);
+    	
+    	var gain = 0;
+    	var dividend = 0;
+    	 
+    	$.each( this.history, function( index, histrec ) {
+    		
+        	if(histrec.ticker == "OGE"){
+        		console.log(histrec)
+        	}
+        	
+    		if(histrec.activity_type == "dividend" || histrec.activity_type == "lt gain" || histrec.activity_type == "st gain"){    			 
+    			if(moment(histrec.activity_date).isBetween( start_date, end_date )){
+    				dividend+=Number(histrec.shares) * Number(histrec.price);
+    			}
+    		}
+    		if(histrec.activity_type == "buy"){
+    			if(moment(histrec.activity_date).isBetween( start_date, end_date )){
+    				gain+=Number(histrec.gain_loss);
+    			}
+    		}
+    	});
+    	
+    	//if(dividend > 0) console.log(this.ticker + " : " + dividend);
+
+    	if(divonly) 
+    		return dividend;
+    	else 
+    		return gain + dividend;
+    }
+    
+    this.toString = function(){
+    	return this.ticker + "\n" +
+    	  this.company + "\n brokerage: " +
+          this.brokerage + "\n shares_owned: " +
+          this.shares_owned + "\n current_price: " +
+          this.current_price + "\n gain_loss: " +
+          this.gain_loss + "\n cost_basis: " +
+          this.cost_basis + "\n" +
+          this.history;
+    }
+}
+ 
+function Portfolio( _id, _name ){
+	this.id = _id;
+	this.name = _name
+	this.current_value= 0;
+	this.realized_gain_loss=0;
+	this.dividends=0;
+	this.dividends_ytd=0;
+	this.dividends_pytd=0;
+	this.dividends_py=0;
+	this.holdings = [];
+	
+    this.toString = function(){
+		console.log("Portfolio: " + this.id + ", " + this.name)
+    }
+    
+    this.getHolding = function( ticker ){
+    	if(this.holdings[ticker] == null){
+    		var h = new Holding( ticker );
+    		this.holdings[ticker] = h;
+    	}
+    	
+    	return this.holdings[ticker];
+    }
+    
+    this.getDividend = function( date_or_year ){
+    	return this.getGain( date_or_year, true );
+    }
+    
+    this.getGain = function( date_or_year, divonly ){
+    	if(divonly == null) divonly = false;
+    	
+    	var gain = 0;
+    	for (var key in this.holdings) {
+    		gain+= this.holdings[key].getGain( date_or_year, divonly );
+    	}  	
+    	return gain;
+    	
+    }    
+    
+    this.getValue = function(){
+    	var value = 0;
+    	for (var key in this.holdings) {
+    		value+= this.holdings[key].getValue();
+    	}  	
+    	return value;
+    }
+} 
+
+var portfolios = [];
+portfolios[1] = new Portfolio(1, 'Taxable');
+portfolios[2] = new Portfolio(2, 'Retirement');
+
+var dt = moment().format("YYYY-MM-DD");
 var yr = moment().year();
 
 $( document ).ready(function() {	    	
 	
-	// get summary data.
-	$.getJSON( "rest?hnd=newsummary", function( data ) {
- 
-		 
-		// get the total value for each portfolio
-	    $.each( data, function( index, rec ) {
+	$.getJSON( "rest?hnd=newsummary", function( data ) {		 
+	 
+		// build each portfolio
+	    $.each( data, function( index, histrec ) {
+	    	var ticker = histrec.ticker;
+	    	//console.log(histrec);
+	    	try{
+	    		var portfolio = portfolios[histrec.portfolio_id];
 	    	
-	    	if(portfolios[rec.portfolio_id] == null) return true; // aka... continue
-	    	
-	    	var activity_date = moment(rec.activity_date);
-	    	
-	    	var p = portfolios[rec.portfolio_id];	    	
-	    	if( $.inArray(rec.ticker, p.holdings) === -1){
-	    		p.holdings.push(rec.ticker)	    		
+	    		// get holding 
+	    		var holding = portfolio.getHolding( ticker );
+	    		
+	    		// add history record to holding object
+	    		holding.addHistory( histrec )	    		
 	    	}
-	    	
-	    	p.history.push(rec);
-	    	
-	    	if(rec.activity_type === "buy" || rec.activity_type === "drip"){
-	    		/*if(rec.ticker=="AAPL"){
-	    			console.log(rec.activity_type)
-	    			console.log(rec.shares)
-	    			console.log((rec.shares_sold||0))
-	    			console.log(rec.shares - (rec.shares_sold||0))
-	    			console.log((rec.shares - (rec.shares_sold || 0))* rec.current_price )
-	    		}
-	    		*/
-
-	    		// determine current portfolio value
-	    		if( rec.shares - (rec.shares_sold || 0) > 0){
-	    			p.current_value += (rec.shares - (rec.shares_sold || 0)) * rec.current_price ;
-	    	    }
-	    		
-	    		//determine current portfolio total realized gain/loss from sales
-	    		p.realized_gain_loss += Number(rec.gain_loss|| 0);
+	    	catch{
+	    		//console.log("exception: error processing history record");
+	    		//console.log(histrec)
 	    	}
-	    	else if(rec.activity_type === "dividend" || rec.activity_type === "st gain" || rec.activity_type === "lt gain"){
-	    		// add dividends to realized gain/loss 
-	    		p.realized_gain_loss += Number(rec.shares * rec.price);
-	    		p.dividends += Number(rec.shares * rec.price);
-	    		
-	    		// aggregate dividends ytd
-	    		if(activity_date.year() == yr){
-	    			p.dividends_ytd += Number(rec.shares * rec.price);
-	    		}
-	    		
-	    		// aggregate dividends prior ytd
-	    		if(activity_date.year() == yr-1){
-	    			p.dividends_py += Number(rec.shares * rec.price);
-	    			
-	    			if( activity_date <= moment().subtract(1, 'year').add()){
-		    			p.dividends_pytd += Number(rec.shares * rec.price);
-		    		}
-	    		}
-	    		
-	    	}
-	    	
-
-	    
 	    });
 		
+		
+		
+	    
+		//console.log(portfolios[1].getValue());
+		 
+	    //console.log(portfolios[2].getValue());
+	    //console.log(portfolios[1].getGain());
+	    //console.log(portfolios[2].getGain());
+	    //console.log("-----------------------");
+	    //console.log(portfolios[1].getDividend());
+	    //console.log(portfolios[2].getDividend());
+	    //console.log(portfolios[2].getDividend('2018-04-01'));
+   
+	    //var o = portfolios[2].holdings['VWENX']
+		//console.log("dividend all time: " + o.getDividend())
+		//console.log("dividend current year: " + o.getDividend(2018))
+		//console.log("dividend 2016: " + o.getDividend(2016))
+		
+		// populate the overview
 		var totalValue = 0;
 		var totalGain = 0;
-	    $.each( portfolios, function( index, rec ) {
-	    	
-	    	try{
-	    		totalValue+= rec.current_value
-	    		totalGain += rec.realized_gain_loss;
-	    		
-	    		$("#" + rec.name.toLowerCase() + "-value").text('$' + $.number(rec.current_value,2))
-	    		$("#" + rec.name.toLowerCase() + "-realized-gain").text('Total Realized Gain: $' + $.number(rec.realized_gain_loss,2))	
-	    		$("#" + rec.name.toLowerCase() + "-total-dividends").text('Total Dividends: $' + $.number(rec.dividends,2))
-	    		
-	    		var arr = "up";
-	    		var clr = "green";
-	    		var pct = (rec.dividends_ytd - rec.dividends_pytd) /rec.dividends_ytd * 100;
-	    		
-	    		if(rec.dividends_pytd > rec.dividends_ytd ){
-	    			arr = "down";
-	    			clr = "maroon";
-	    		}	    		
+		$.each( portfolios, function( index, p ) {
+		    
+			if(p == null ) return true; // aka... continue
 
-	    		$("#" + rec.name.toLowerCase() + "-ytd-dividends").html('Total Dividends PY/YTD: $' + $.number(rec.dividends_pytd,2) +" / $" + $.number(rec.dividends_ytd,2) + " <i class='fa fa-arrow-up' style='position:relative; top:-1px; color:" + clr + ";' aria-hidden='true'>  "+ $.number(pct,2) + "%</i>  "   )
-	    	}
-	    	catch{}
-	    	
-	    	
-	    });
+		    $("#" + p.name.toLowerCase() + "-value").text('$' + $.number(p.getValue(),2))
+            $("#" + p.name.toLowerCase() + "-total-dividends").text('Total Dividends: $' + $.number(p.getDividend(),2))
+            
+            var pct = (p.getDividend( yr )- p.getDividend( moment().subtract(1, 'years') )) / p.getDividend( yr ) * 100;			
+		    $("#" + p.name.toLowerCase() + "-ytd-dividends").html('Total Dividends PY/YTD: $' + $.number(p.getDividend( moment().subtract(1, 'years') ),2) +" / $" + $.number(p.getDividend( yr ),2) + "  " + $.number(pct,2) + "%" );
+		    
+		    $("#" + p.name.toLowerCase() + "-realized-gain").text('Total Realized Gain: $' + $.number(p.getGain(),2))
+		    
+		    totalValue+=p.getValue();
+		    totalGain+=p.getGain();
+		});
+		
 	    
 	    $("#total-value").text('$' + $.number(totalValue,2));
 	    $("#total-realized-gain").text('Total Gains: $' + $.number(totalGain,2))	
 
-		 	    
 	    buildSummaryCharts( portfolios );
-	    
-	    //loadPortfolio( 1 )
-	    //loadPortfolio( 2 )
-	});  
-	
-	
+
+	    //loadHistory( "VWENX" )
+	});
 	
 }); //end on ready
+
+function loadHistory( ticker ){
+	console.log( ticker )
+
+	var p = portfolios[2];
+	var holding = p.getHolding(ticker);	
+	
+    if($.fn.dataTable.isDataTable("#history-table")){
+   	 var tbl = $('#history-table').DataTable();
+   	 $('#history-table').empty();
+   	 tbl.destroy();
+    }
+    
+	var content = [];
+	$.each( holding.history, function( index, histrec ) {	
+		console.log(histrec);
+		content.push(histrec);
+	});
+	
+	var historytable = $('#history-table').DataTable( {
+	        data: content
+	        ,sDom: '<"top"i>rt<"bottom"lp><"clear">' //hide the search box ("f" is not in top or bottom)
+	     	,searching: true
+		    ,info:false
+			,lengthChange:false
+		    ,paginate:false
+	        ,columns: [
+	        	{ data: "id", visible:false },
+	        	{ data: "ticker", visible:false },
+	        	{ data: "brokerage_id", visible:false },
+	            { data: "activity_date" },
+	            { data: "activity_type" },
+	            { data: "shares" , className: "dt-right",render: function ( data, type, row ) { if(data=='----') return data; else return $.number(data,4); } },
+	            { data: "price", className: "dt-right", render: function ( data, type, row ) { if(data=='----') return data; else return '$' +$.number(data,4); } },
+	            { data: "shares_sold", className: "dt-right", render: function ( data, type, row ) { if(data=='----') return data; else return $.number(data,2); } },
+	            { data: "gain_loss", className: "dt-right", createdCell: function(td, cellData, rowData, row, col) { if(cellData == '----'){}else if(Number(cellData)<0){ $(td).css('color','red'); } else { $(td).css('color','green'); }}, render: function ( data, type, row, meta ) { if(data=='----') return data; else return '$' +$.number(data,2); } },
+	            //{ "targets": 9, "width":"140px", "orderable":false, "data":null, render: function ( data, type, row ) { if(row.activity_type == "drip"){ return ""; } else{return "<i class='fa fa-trash-o fa-lg ico-trash' aria-hidden='true'></i>" } } }
+	        ]
+	        ,order: [[ 2, "asc" ]]
+	     	,destroy:true
+	     	,initComplete: function(settings,json){
+	     		
+			    // update modal title
+			    /*
+			    var yearLinks = "<span class='histyear' onclick='filterhistory(0);'>All</span>"
+			    						  
+			    var years= "";
+			    $.each( historytable.rows().data(), function( key, o ) {
+			        if(o.activity_date.substring(0,4) != years ){						        	
+			        	if(years != "") yearLinks += " | <span class='histyear' onclick='filterhistory(" + years + ");'>" + years + "</span>"
+			        	years = o.activity_date.substring(0,4);
+			        }
+			    });
+			    yearLinks += " | <span class='histyear' onclick='filterhistory(" + years + ");'>" + years + "</span>"
+			    
+			    $('#holding-history-title').html("Transaction history for " + data.name + " (" + data.ticker + ")<br/>" + yearLinks);
+	     		
+	     		/*
+			 	var filteredData = historytable
+		 	    .column( 2 )
+		 	    .data()
+		 	    .filter( function ( value, index ) {
+		 	    	console.log(value.substring(0,4) == yr)
+		 	        //return (value.substring(0,4) == yr) ? true : false;
+		 	    	return false;
+		 	    } );
+	     		*/
+	     	}
+    });	
+	
+	 
+	
+	$("#modal-history-title").html( "<h1>" + ticker + "</h1>")
+	
+	$.mobile.changePage("#modal-history", {
+       role: "dialog"  // show #page2 as dialog
+       ,transition: "slidedown"
+    })
+}
 
 
 function loadPortfolio( id ){
@@ -191,10 +481,32 @@ function loadPortfolio( id ){
 	
 	$("#btn-" + p.name.toLowerCase() + "-holdings").addClass("ui-btn-active").click();
 	
-	
-	$.each( p.holdings, function( index, rec ) {
-	
+
+	for (var key in p.holdings) {
+		var rec = p.holdings[key];
+
+		console.log(rec)
+		
+		if(rec.shares_owned > 0){
+			var cls_gain_loss = (rec.getGain() >= 0) ? 'gain' : 'loss';
+			var current_gain_loss = current_value - (current_shares *cost_basis);
+			var totalgain = current_gain_loss + dividend_gain;	
+			
+			o.append('<div role="main" class="ui-content-stock" onclick="javascript:loadHistory(\'' + rec.ticker + '\');">' +
+					 '<table width="100%"><tr><td><span class="grp-hdr">' + rec.ticker + '</span><br/>' +
+					 '<span class="grp-subhdr" style="width:50px;">' + rec.company + '</span>' +
+					 '</td>' + 
+					 '<td align="right" width="150">' + $.number(rec.shares_owned,4) + ' / $' + $.number(rec.getValue(),2) + '<br/>$' + $.number(rec.current_price,2) + '<br/>$' + $.number(cost_basis,2) + '</td>' +
+					 '<td align="right" width="100"> <div class="holding-value-' + cls_gain_loss + '">$' + $.number(current_gain_loss,2) + '<br/>$' + $.number(totalgain,2) + '<br/></div></td>' +
+					 '</tr></table>' +
+				     '</div>')
+		}
+		continue;
+		
+		
 		var company = "";
+		var brokerage = 0;
+		var portfolio_id = 0;
 		var current_shares = 0;
 		var current_price = 0;
 		var total_cost = 0;
@@ -232,17 +544,8 @@ function loadPortfolio( id ){
 		shares_sold:4
 		ticker:"AAPL"
 		*/	
-		if(current_shares > 0){
-			o.append('<div role="main" class="ui-content-stock" >' +
-					 '<table width="100%"><tr><td><span class="grp-hdr">' + rec + '</span><br/>' +
-					 '<span class="grp-subhdr" style="width:50px;">' + company + '</span>' +
-					 '</td>' + 
-					 '<td align="right" width="150">' + $.number(current_shares,4) + ' / $' + $.number(current_value,2) + '<br/>$' + $.number(current_price,2) + '<br/>$' + $.number(cost_basis,2) + '</td>' +
-					 '<td align="right" width="100"> <div class="holding-value-' + cls_gain_loss + '">$' + $.number(current_gain_loss,2) + '<br/>$' + $.number(dividend_gain,2) + '<br/></div></td>' +
-					 '</tr></table>' +
-				     '</div>')
-		}
-	});
+
+	}
 	
 	/*
 		<div role="main" class="ui-content-stock" >
@@ -348,7 +651,7 @@ function loadPortfolio( id ){
 
 
 		  <div class="ui-grid-a ui-responsive">		
-			<div class="ui-block-a" style="text-align:center;"> YTD charts</div>
+			<div id='taxable-ytd-chart' class="ui-block-a" style="text-align:center;"> YTD charts</div>
 			<div class="ui-block-b" style="text-align:center;"> CY BY MONTH</div>
 	      </div>			
 
@@ -447,5 +750,30 @@ function loadPortfolio( id ){
 -->
 </div><!-- /page -->
 
+
+<!--  history modal -->
+    <div id="modal-history" data-role="dialog" data-transition="flip">
+        <div data-role="header" id="modal-history-title">	
+        </div>        
+        <div data-role="content" id="modal-history-content">
+          <table id="history-table" class="display" style="width:100%">
+	        <thead>
+	            <tr>
+	                <th>id</th>
+	                <th>holding id</th>
+	                <th>brokerage id</th>
+	                <th>date</th>
+	                <th>type</th>
+	                <th>shares</th>
+	                <th>price</th>
+	                <th>shares<br/>sold</th>
+	                <th>+/-</th>
+	                <th></th>
+	            </tr>
+	        </thead>
+	      </table>   
+        </div>
+        <a href="index.html" data-rel="back" class="ui-btn ui-shadow ui-corner-all ui-btn-a">Close</a>
+    </div>
 </body>
 </html>

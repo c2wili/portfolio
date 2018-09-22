@@ -47,15 +47,16 @@ function buildSummaryCharts( portfolios ){
            colorByPoint: true,
            data: [ {
                name: 'Taxable',
-               y: portfolios[1].current_value
+               y: portfolios[1].getValue()
            }, {
                name: 'Retirement',
-               y:  portfolios[2].current_value
+               y:  portfolios[2].getValue()
            }]
        }]
 	});	
 	
-	console.log(portfolios)
+	 
+	//console.log(portfolios)
 	
 	Highcharts.chart('taxable-ytd-dividend-chart', {
 		 chart: {
@@ -116,10 +117,10 @@ function buildSummaryCharts( portfolios ){
 	     
 		series:[{
 	        name: yr -1,
-	        data: [ portfolios[1].dividends_pytd]
+	        data: [ portfolios[1].getDividend( moment().subtract(1, 'years') ) ] 
 	    },{
 	        name: yr,
-	        data: [ portfolios[1].dividends_ytd] 
+	        data: [ portfolios[1].getDividend( moment() ) ]
 	    }]
 	});	
 	
@@ -182,10 +183,10 @@ function buildSummaryCharts( portfolios ){
 	     
 		series:[{
 	        name: yr -1,
-	        data: [ portfolios[2].dividends_pytd]
+	        data: [ portfolios[2].getDividend( moment().subtract(1, 'years') )  ]
 	    },{
 	        name: yr,
-	        data: [ portfolios[2].dividends_ytd] 
+	        data: [ portfolios[2].getDividend( moment() )  ] 
 	    }]
 	});	
 }
