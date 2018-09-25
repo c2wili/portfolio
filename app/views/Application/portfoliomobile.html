@@ -21,7 +21,8 @@
 <style>
 #all-accounts-pie{position:absolute; top:55px; left:255px; width:200px;}
 #taxable-ytd-dividend-chart{position:absolute; top:196px; left:255px; width:200px;}
-#retirement-ytd-dividend-chart{position:absolute; top:379px; left:255px; width:200px;}
+#retirement-ytd-dividend-chart{position:absolute; top:379px; left:120px; width:200px;}
+#retirement-portfolio-chart{position:absolute; top:379px; left:255px; width:200px;}
 .ui-content-stock{ background-color:#ffffff; margin:10px; padding:.2em; }
 .ui-overlay-a, .ui-page-theme-a, .ui-page-theme-a .ui-panel-wrapper {
     background-color: #e9e9e9;
@@ -354,27 +355,26 @@ function loadPortfolio( id ){
 	
 	$("#btn-" + p.name.toLowerCase() + "-holdings").addClass("ui-btn-active").click();
 	
+console.log(p)
+	$.each( p.holdings, function( index, h ) {
+//		var rec = p.holdings[key];
 
-	for (var key in p.holdings) {
-		var rec = p.holdings[key];
-
-		console.log(rec)
-		
-		if(rec.shares_owned > 0){
-			var cls_gain_loss = (rec.getGain() >= 0) ? 'gain' : 'loss';
-			var current_gain_loss = current_value - (current_shares *cost_basis);
-			var totalgain = current_gain_loss + dividend_gain;	
+		if(h.rec.shares > 0){
+			console.log(h)
+			var cls_gain_loss = (h.getGain() >= 0) ? 'gain' : 'loss';
+			var current_gain_loss = h.rec.value - (h.rec.shares * h.rec.basis);
+			//var totalgain = current_gain_loss + dividend_gain;	
 			
-			o.append('<div role="main" class="ui-content-stock" onclick="javascript:loadHistory(\'' + rec.ticker + '\');">' +
-					 '<table width="100%"><tr><td><span class="grp-hdr">' + rec.ticker + '</span><br/>' +
-					 '<span class="grp-subhdr" style="width:50px;">' + rec.company + '</span>' +
+			o.append('<div role="main" class="ui-content-stock" onclick="javascript:loadHistory(\'' + h.rec.ticker + '\');">' +
+					 '<table width="100%"><tr><td><span class="grp-hdr">' + h.rec.ticker + '</span><br/>' +
+					 '<span class="grp-subhdr" style="width:50px;">' + h.rec.name + '</span>' +
 					 '</td>' + 
-					 '<td align="right" width="150">' + $.number(rec.shares_owned,4) + ' / $' + $.number(rec.getValue(),2) + '<br/>$' + $.number(rec.current_price,2) + '<br/>$' + $.number(cost_basis,2) + '</td>' +
-					 '<td align="right" width="100"> <div class="holding-value-' + cls_gain_loss + '">$' + $.number(current_gain_loss,2) + '<br/>$' + $.number(totalgain,2) + '<br/></div></td>' +
+					 '<td align="right" width="150">' + $.number(h.rec.shares,4) + ' / $' + $.number(h.getValue(),2) + '<br/>$' + $.number(h.rec.price,2) + '<br/>$' + $.number(h.rec.basis,2) + '</td>' +
+					 '<td align="right" width="100"> <div class="holding-value-' + cls_gain_loss + '">$' + $.number(h.getGain(),2) + '<br/>$' + $.number(h.getGain(),2) + '<br/></div></td>' +
 					 '</tr></table>' +
 				     '</div>')
 		}
-		continue;
+		return true; //aka...continue
 		
 		
 		var company = "";
@@ -418,7 +418,7 @@ function loadPortfolio( id ){
 		ticker:"AAPL"
 		*/	
 
-	}
+	});
 	
 	/*
 		<div role="main" class="ui-content-stock" >
@@ -480,6 +480,7 @@ function loadPortfolio( id ){
 
 	<div role="main" class="ui-content" style=" background-color:#ffffff; margin:10px; " onclick='javascript:loadPortfolio(2);'>
 	    <div id="retirement-ytd-dividend-chart"></div>
+	    <div id="retirement-portfolio-chart"></div>	    
 		<span class='grp-hdr'>Retirement</span><br/>
 		<span class='grp-subhdr'>Current Value</span><br/>
 		<span id="retirement-value" class='grp-val'>----</span>
