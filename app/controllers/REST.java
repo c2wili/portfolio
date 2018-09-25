@@ -35,6 +35,8 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 
 import db.HikariCP;
 import models.*;
@@ -44,6 +46,7 @@ public class REST extends Controller {
 	private static Params requestParams;
 	private static int portfolioId = 1;
 	private static HashMap sessionHash;
+	private static String gak = "~";
 	
 	/*
 	 * get quotes from cache or api if needed.   
@@ -841,9 +844,7 @@ public class REST extends Controller {
 					jsonRow.addProperty("price", 0);
 					jsonRow.addProperty("val", 0);
 					jsonRow.addProperty("gainloss", 0 );
-				}
-				 
-				
+				}			
 
 				// add row to returning result set
 				jsonRows.add(jsonRow);				
@@ -1453,25 +1454,34 @@ public class REST extends Controller {
 		Connection con = null;
 		ResultSet rs = null;
 	
-		JsonArray  jsonRows = new JsonArray();
-		
+		Vector<String> holdinglist = new Vector<String>();
+		HashMap<String, Holding> h = new HashMap<String, Holding>();
 		try {
-						
-			con = HikariCP.getConnection();
 			
-			String sql = "  SELECT t.portfolio_id,t.activity_date, t.brokerage_id, t.ticker, t.activity_type,t.price,t.shares,h.name as company_name, t.id " +
-                         "\n       ,SUM(s.shares) AS shares_sold, coalesce(SUM(s.gain_loss),0) as gain_loss " +
-                         "\n FROM portfolio.trades t  " +
-                         "\n INNER JOIN portfolio.holdings h  " +
-                         "\n         ON t.ticker = h.ticker  " +
-                         "\n        AND t.brokerage_id = h.brokerage_id " +
-                         "\n LEFT OUTER JOIN portfolio.salesdetail s " + 
-                         "\n         ON t.id = s.buy_trades_id  " +
-                         "\n        AND t.portfolio_id = s.portfolio_id " +
-                         "\n GROUP BY 1,2,3,4,5,6,7,8,9  " +			
-                         "\n ORDER BY 1,2,5,4,10  ";
-                         			
+			con = HikariCP.getConnection(); 
+
+			String sql = "SELECT * FROM portfolio.holdings";
 			
+			ps = con.prepareStatement(sql);			
+			rs = ps.executeQuery();
+ 
+			while(rs.next()){
+				JsonObject jsonRow = new JsonObject();
+				
+				String ticker = rs.getString("ticker").trim();
+				String name = rs.getString("name").trim();
+				int portfolio = rs.getInt("portfolio_id");
+				int brokerage = rs.getInt("brokerage_id");
+				
+				if(!holdinglist.contains(portfolio + gak + ticker + gak + brokerage)){
+					holdinglist.add(portfolio + gak + ticker + gak + brokerage);
+					h.put(portfolio + gak + ticker + gak + brokerage,  new Holding(portfolio, ticker, name, brokerage ));
+				}
+			}
+			rs.close();
+			ps.close();
+			
+			sql = "SELECT A.*, 0.00000 as shares_sold, 0.00000 as gain_loss FROM portfolio.trades A order by activity_date";			
 			Logger.debug(sql);		
 			
 			ps = con.prepareStatement(sql);			
@@ -1479,15 +1489,16 @@ public class REST extends Controller {
 			
 			ResultSetMetaData rsMD = rs.getMetaData();
 			int colCount = rsMD.getColumnCount();
-
-			HashMap sessionHash = Cache.get(session.getId(), HashMap.class);			
-			HashMap quotes = (HashMap) sessionHash.get("quotes");
-						
-			System.out.println(quotes);
-						
+		 				
 			while(rs.next()){
-				JsonObject jsonRow = new JsonObject();
+				JsonObject jsonRow = new JsonObject();				
 
+				String ticker = rs.getString("ticker").trim();	
+				int portfolio = rs.getInt("portfolio_id");
+				int brokerage = rs.getInt("brokerage_id");
+				
+				JsonArray jsonRows = h.get(portfolio + gak + ticker + gak + brokerage).getHistory();
+				
 				for (int c = 1; c <= colCount; c++) {
 					String colHeader = rsMD.getColumnName(c);
 					
@@ -1515,34 +1526,78 @@ public class REST extends Controller {
 						jsonRow.addProperty(colHeader, colVal);
 					}
 				}
-				
-				if(quotes.containsKey(jsonRow.get("ticker").getAsString())){
-				    double price = ((Quote)(quotes.get(jsonRow.get("ticker").getAsString()))).getPrice();
-					jsonRow.addProperty("current_price", price );
-				}
+				 
+				//System.out.println(jsonRow.toString());
 
 				// add row to returning result set
 				jsonRows.add(jsonRow);				
 			}
+
+			rs.close();
+			ps.close();
 			
-			renderJSON(jsonRows);
+			// get latest prices
+			sql = "SELECT ticker,price FROM( " +
+                    "\n  SELECT H.PORTFOLIO_ID||'~'||Q.ticker||'~'||H.BROKERAGE_ID AS TICKER, price, RANK() over (partition BY Q.ticker ORDER BY ts DESC) rnk " +
+                    "\n  FROM PORTFOLIO.QUOTE_HIST Q" +
+                    "\n  INNER JOIN PORTFOLIO.HOLDINGS H " +
+                    "\n     ON Q.TICKER = H.TICKER " +
+                    "\n  WHERE CAST(TS AS DATE) >= CURRENT_DATE-50 " +
+                    "\n)z " +
+                    "\nWHERE rnk = 1";
+			Logger.debug(sql);		
+			
+			ps = con.prepareStatement(sql);			
+			rs = ps.executeQuery();
+			
+			while(rs.next()){		
+
+				String ticker = rs.getString("ticker").trim();
+				String price = rs.getString("price").trim();
+				
+				h.get(ticker).updatePrice(price);
+			}
+			
+			rs.close();
+			ps.close();
+			
+			// process the history for all holdings
+			Iterator i = holdinglist.iterator();
+		    while (i.hasNext()) {
+		        h.get(i.next()).processHistory();
+		    }
+		 
+			
+			System.out.println(holdinglist.toString());
+			System.out.println(h.get("2~VWENX~2").toString());
+			System.out.println(h.get("2~VWILX~2").toString());
+			System.out.println(h.get("1~OGE~1").toString());
+					
+					
+					
+					
+			
+			
+			con.close();
+			
+			renderJSON( new Gson().toJson(h));
 		
 		} 
 		catch (Exception e) {
-			Logger.error("getOverview caught exception " + e.getMessage());
-			throw new Exception("ERROR: getOverview() " + e.getMessage());  
+			System.out.println("getOverview caught exception " + e.getMessage());
+ 
 		} 
 		finally {
 			
 			try {				
 				rs.close();
 				ps.close();
-				HikariCP.close();
+				con.close();
 				
 				// use the Play connection close method !important
 				if(!con.isClosed()) con.close();
 			} catch (SQLException e) {
-				Logger.error("getOverview: Error closing connection " + e.getMessage());
+				System.out.println("getOverview: Error closing connection " + e.getMessage());
 			} 
 		}
     }
