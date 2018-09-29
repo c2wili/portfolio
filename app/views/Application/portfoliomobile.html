@@ -21,14 +21,14 @@
 <style>
 #all-accounts-pie{position:absolute; top:55px; left:255px; width:200px;}
 #taxable-ytd-dividend-chart{position:absolute; top:196px; left:255px; width:200px;}
-#retirement-ytd-dividend-chart{position:absolute; top:379px; left:120px; width:200px;}
+#retirement-ytd-dividend-chart{position:absolute; top:379px; left:140px; width:200px;}
 #retirement-portfolio-chart{position:absolute; top:379px; left:255px; width:200px;}
 .ui-content-stock{ background-color:#ffffff; margin:10px; padding:.2em; }
 .ui-overlay-a, .ui-page-theme-a, .ui-page-theme-a .ui-panel-wrapper {
     background-color: #e9e9e9;
 }    
-.grp-hdr{font-size:17px; font-weight:bold;}
-.grp-subhdr{font-size:12px;}
+.grp-hdr{font-size:17px; font-weight:bold; vertical-align:bottom;}
+.grp-subhdr{font-size:12px; width:155px; white-space:nowrap; text-overflow:ellipsis; overflow:hidden;}
 .grp-val{color:#0000ff; font-size:15px;}
 
 table td{
@@ -41,7 +41,7 @@ font-size:12px;
  border-radius: 5px; 
  box-shadow: 0 0 5px rgba(1, 1, 1, 0.7);
  background-color: #FFFFFF;
- height:42px;
+ height:15px;
  width:80px;
  text-align:right;
  background-image: linear-gradient(-60deg, #FF0000 0%, #e0b1b1 100%);
@@ -54,7 +54,7 @@ font-size:12px;
  border-radius: 5px; 
  box-shadow: 0 0 5px rgba(1, 1, 1, 0.7);
  background-color: #FFFFFF;
- height:42px;
+ height:15px;
  width:80px;
  text-align:right;
 background-image: linear-gradient(-60deg, #00721c 0%, #a4c1ab 100%);
@@ -64,7 +64,10 @@ background-image: linear-gradient(-60deg, #00721c 0%, #a4c1ab 100%);
  
 }
 
-
+.ui-dialog-contain{
+    max-width:600px;
+    width:95%;
+}
 </style>
 
 
@@ -166,10 +169,12 @@ function Portfolio( _id, _name ){
 		return hold;
 	}
 	
-    this.getValue = function(){
+    this.getValue = function(brokerage){
+
     	var value = 0;
     	$.each( this.holdings, function( index, h ) {
-    	    value+= h.getValue();
+    		if(brokerage == null || h.rec.brokerage == brokerage)
+    	    	value+= h.getValue();    		
     	});
     	return value;
     }
@@ -260,7 +265,9 @@ $( document ).ready(function() {
 
 	    buildSummaryCharts( portfolios );
 
-	    //loadHistory( "VWENX" )
+	    //loadPortfolio(2)
+	    //loadHistory("VWENX")
+	    
 	});
 	
 }); //end on ready
@@ -271,6 +278,7 @@ function loadHistory( ticker ){
 	var p = portfolios[2];
 	var holding = p.getHolding(ticker);	
 	
+	console.log(holding);
     if($.fn.dataTable.isDataTable("#history-table")){
    	 var tbl = $('#history-table').DataTable();
    	 $('#history-table').empty();
@@ -278,7 +286,7 @@ function loadHistory( ticker ){
     }
     
 	var content = [];
-	$.each( holding.history, function( index, histrec ) {	
+	$.each( holding.rec.history, function( index, histrec ) {	
 		console.log(histrec);
 		content.push(histrec);
 	});
@@ -300,7 +308,7 @@ function loadHistory( ticker ){
 	            { data: "price", className: "dt-right", render: function ( data, type, row ) { if(data=='----') return data; else return '$' +$.number(data,4); } },
 	            { data: "shares_sold", className: "dt-right", render: function ( data, type, row ) { if(data=='----') return data; else return $.number(data,2); } },
 	            { data: "gain_loss", className: "dt-right", createdCell: function(td, cellData, rowData, row, col) { if(cellData == '----'){}else if(Number(cellData)<0){ $(td).css('color','red'); } else { $(td).css('color','green'); }}, render: function ( data, type, row, meta ) { if(data=='----') return data; else return '$' +$.number(data,2); } },
-	            //{ "targets": 9, "width":"140px", "orderable":false, "data":null, render: function ( data, type, row ) { if(row.activity_type == "drip"){ return ""; } else{return "<i class='fa fa-trash-o fa-lg ico-trash' aria-hidden='true'></i>" } } }
+	            { "targets": 9, "width":"140px", "orderable":false, "data":null, render: function ( data, type, row ) { if(row.activity_type == "drip"){ return ""; } else{return "<i class='fa fa-trash-o fa-lg ico-trash' aria-hidden='true'></i>" } } }
 	        ]
 	        ,order: [[ 2, "asc" ]]
 	     	,destroy:true
@@ -354,8 +362,7 @@ function loadPortfolio( id ){
 	$.mobile.navigate( "#" + p.name.toLowerCase() + "-summary" );
 	
 	$("#btn-" + p.name.toLowerCase() + "-holdings").addClass("ui-btn-active").click();
-	
-console.log(p)
+	 
 	$.each( p.holdings, function( index, h ) {
 //		var rec = p.holdings[key];
 
@@ -363,16 +370,24 @@ console.log(p)
 			console.log(h)
 			var cls_gain_loss = (h.getGain() >= 0) ? 'gain' : 'loss';
 			var current_gain_loss = h.rec.value - (h.rec.shares * h.rec.basis);
-			//var totalgain = current_gain_loss + dividend_gain;	
-			
+				
 			o.append('<div role="main" class="ui-content-stock" onclick="javascript:loadHistory(\'' + h.rec.ticker + '\');">' +
-					 '<table width="100%"><tr><td><span class="grp-hdr">' + h.rec.ticker + '</span><br/>' +
-					 '<span class="grp-subhdr" style="width:50px;">' + h.rec.name + '</span>' +
+			         '<table width="100%" border=0>' +
+			         '<tr><td class="grp-hdr" rowspan=2 style="width:95px;">' + h.rec.ticker + '</td><td align="right">111</td><td align="right" style="width:95px;">' + $.number(h.rec.shares,4) + '</td></tr>' +
+			         '<tr><td align="right">111</td><td align="right">$' + $.number(h.getValue(),2) + '</td></tr>' +
+			         '<tr><td colspan=2><div class="grp-subhdr">' + h.rec.name + '</div></td><td align="right"><div class="holding-value-' + cls_gain_loss + '">$' + $.number(current_gain_loss,2) + '</div></td></tr>' +
+			         '</table></div>'
+			);
+			/*
+			o.append('<div role="main" class="ui-content-stock" onclick="javascript:loadHistory(\'' + h.rec.ticker + '\');">' +
+					 '<table width="100%"><tr><td nowrap><span class="grp-hdr">' + h.rec.ticker + '</span><br/>' +
+					 '<div class="grp-subhdr" style="width:135px; white-space:nowrap; text-overflow:ellipsis; overflow:hidden;">' + h.rec.name + '</div>' +
 					 '</td>' + 
 					 '<td align="right" width="150">' + $.number(h.rec.shares,4) + ' / $' + $.number(h.getValue(),2) + '<br/>$' + $.number(h.rec.price,2) + '<br/>$' + $.number(h.rec.basis,2) + '</td>' +
-					 '<td align="right" width="100"> <div class="holding-value-' + cls_gain_loss + '">$' + $.number(h.getGain(),2) + '<br/>$' + $.number(h.getGain(),2) + '<br/></div></td>' +
+					 '<td align="right" width="100">$' + $.number(h.getGain(),2) + '<br/>000.00<div class="holding-value-' + cls_gain_loss + '">$' + $.number(current_gain_loss,2) + '</div></td>' +
 					 '</tr></table>' +
-				     '</div>')
+				     '</div>');
+			*/
 		}
 		return true; //aka...continue
 		
@@ -434,6 +449,7 @@ console.log(p)
 		<span class='grp-subhdr'>Waste Management</span><br/>
 	</div><!-- /content -->
 	*/
+	
 	
 }
 </script>
