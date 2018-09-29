@@ -1482,7 +1482,7 @@ public class REST extends Controller {
 			ps.close();
 			
 			sql = "SELECT A.*, 0.00000 as shares_sold, 0.00000 as gain_loss FROM portfolio.trades A order by activity_date";			
-			Logger.debug(sql);		
+			Logger.info(sql);		
 			
 			ps = con.prepareStatement(sql);			
 			rs = ps.executeQuery();
@@ -1545,7 +1545,7 @@ public class REST extends Controller {
                     "\n  WHERE CAST(TS AS DATE) >= CURRENT_DATE-50 " +
                     "\n)z " +
                     "\nWHERE rnk = 1";
-			Logger.debug(sql);		
+			Logger.info(sql);		
 			
 			ps = con.prepareStatement(sql);			
 			rs = ps.executeQuery();
@@ -1567,17 +1567,7 @@ public class REST extends Controller {
 		        h.get(i.next()).processHistory();
 		    }
 		 
-			
-			System.out.println(holdinglist.toString());
-			System.out.println(h.get("2~VWENX~2").toString());
-			System.out.println(h.get("2~VWILX~2").toString());
-			System.out.println(h.get("1~OGE~1").toString());
-					
-					
-					
-					
-			
-			
+		
 			con.close();
 			
 			renderJSON( new Gson().toJson(h));
