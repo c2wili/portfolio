@@ -1482,7 +1482,8 @@ public class REST extends Controller {
 			ps.close();
 			
 			sql = "SELECT A.*, 0.00000 as shares_sold, 0.00000 as gain_loss FROM portfolio.trades A order by activity_date";			
-			Logger.info(sql);		
+			Logger.info(sql);
+			System.out.println("1");
 			
 			ps = con.prepareStatement(sql);			
 			rs = ps.executeQuery();
@@ -1532,7 +1533,7 @@ public class REST extends Controller {
 				// add row to returning result set
 				jsonRows.add(jsonRow);				
 			}
-
+			System.out.println("2");
 			rs.close();
 			ps.close();
 			
@@ -1546,7 +1547,7 @@ public class REST extends Controller {
                     "\n)z " +
                     "\nWHERE rnk = 1";
 			Logger.info(sql);		
-			
+			System.out.println("3");
 			ps = con.prepareStatement(sql);			
 			rs = ps.executeQuery();
 			
@@ -1560,14 +1561,14 @@ public class REST extends Controller {
 			
 			rs.close();
 			ps.close();
-			
+			System.out.println("4");
 			// process the history for all holdings
 			Iterator i = holdinglist.iterator();
 		    while (i.hasNext()) {
 		        h.get(i.next()).processHistory();
 		    }
 		 
-		
+		    System.out.println("5");
 			con.close();
 			
 			renderJSON( new Gson().toJson(h));
