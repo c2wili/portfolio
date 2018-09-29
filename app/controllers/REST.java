@@ -1497,7 +1497,7 @@ public class REST extends Controller {
 				String ticker = rs.getString("ticker").trim();	
 				int portfolio = rs.getInt("portfolio_id");
 				int brokerage = rs.getInt("brokerage_id");
-				
+				System.out.println(ticker);
 				JsonArray jsonRows = h.get(portfolio + gak + ticker + gak + brokerage).getHistory();
 				
 				for (int c = 1; c <= colCount; c++) {
