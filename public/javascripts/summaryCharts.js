@@ -61,7 +61,7 @@ function buildSummaryCharts( portfolios ){
 	Highcharts.chart('taxable-ytd-dividend-chart', {
 		 chart: {
               type:'column',
-              height:90,
+              height:110,
               width:100 ,
               backgroundColor: 'transparent'
 
@@ -127,7 +127,7 @@ function buildSummaryCharts( portfolios ){
 	Highcharts.chart('retirement-ytd-dividend-chart', {
 		 chart: {
              type:'column',
-             height:90,
+             height:110,
              width:100 ,
              backgroundColor: 'transparent'
 

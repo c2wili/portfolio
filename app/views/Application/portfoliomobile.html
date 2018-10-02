@@ -19,10 +19,10 @@
 	
 	
 <style>
-#all-accounts-pie{position:absolute; top:55px; left:255px; width:200px;}
-#taxable-ytd-dividend-chart{position:absolute; top:196px; left:255px; width:200px;}
-#retirement-ytd-dividend-chart{position:absolute; top:379px; left:140px; width:200px;}
-#retirement-portfolio-chart{position:absolute; top:379px; left:255px; width:200px;}
+#all-accounts-pie{position:absolute; top:55px; left:255px; width:96px;}
+#taxable-ytd-dividend-chart{position:absolute; top:184px; left:255px; width:96px;}
+#retirement-ytd-dividend-chart{position:absolute; top:364px; left:140px; width:96	px;}
+#retirement-portfolio-chart{position:absolute; top:379px; left:255px; width:96px;}
 .ui-content-stock{ background-color:#ffffff; margin:10px; padding:.2em; }
 .ui-overlay-a, .ui-page-theme-a, .ui-page-theme-a .ui-panel-wrapper {
     background-color: #e9e9e9;
@@ -270,13 +270,23 @@ $( document ).ready(function() {
 	    
 	});
 	
+	
+	$('[id*=chart]').on("click", function(event){
+		  event.stopPropagation();
+		  console.log( "I was clicked, but my parent will not be." );
+	});
+	
 }); //end on ready
 
 function loadHistory( ticker ){
 	console.log( ticker )
 
-	var p = portfolios[2];
-	var holding = p.getHolding(ticker);	
+	var p = portfolios[1];	
+	var holding = p.getHolding(ticker);
+	if(holding == null){
+		p = portfolios[2];
+		holding = p.getHolding(ticker);
+	}
 	
 	console.log(holding);
     if($.fn.dataTable.isDataTable("#history-table")){
@@ -357,7 +367,7 @@ function loadPortfolio( id ){
 	var p = portfolios[id];
 	var o = $("#" + p.name.toLowerCase() + "-summary-content");
 	o.empty();
-	
+	 
 	
 	$.mobile.navigate( "#" + p.name.toLowerCase() + "-summary" );
 	
@@ -366,15 +376,20 @@ function loadPortfolio( id ){
 	$.each( p.holdings, function( index, h ) {
 //		var rec = p.holdings[key];
 
+
 		if(h.rec.shares > 0){
-			console.log(h)
-			var cls_gain_loss = (h.getGain() >= 0) ? 'gain' : 'loss';
+			//console.log(h)
+			//console.log(h.rec.value)
+			//console.log((h.rec.shares * h.rec.basis))			
 			var current_gain_loss = h.rec.value - (h.rec.shares * h.rec.basis);
-				
+			var cls_gain_loss = (current_gain_loss >= 0) ? 'gain' : 'loss';
+			//console.log((h.rec.shares * h.rec.basis))			
+			//console.log("*******")
+			
 			o.append('<div role="main" class="ui-content-stock" onclick="javascript:loadHistory(\'' + h.rec.ticker + '\');">' +
 			         '<table width="100%" border=0>' +
-			         '<tr><td class="grp-hdr" rowspan=2 style="width:95px;">' + h.rec.ticker + '</td><td align="right">111</td><td align="right" style="width:95px;">' + $.number(h.rec.shares,4) + '</td></tr>' +
-			         '<tr><td align="right">111</td><td align="right">$' + $.number(h.getValue(),2) + '</td></tr>' +
+			         '<tr><td class="grp-hdr" rowspan=2 style="width:95px;">' + h.rec.ticker + '</td><td align="right">$' + $.number(h.rec.current_price,2) + '</td><td align="right" style="width:95px;">' + $.number(h.rec.shares,4) + '</td></tr>' +
+			         '<tr><td align="right">basis $' + $.number(h.rec.basis,2) + '</td><td align="right">$' + $.number(h.getValue(),2) + '</td></tr>' +
 			         '<tr><td colspan=2><div class="grp-subhdr">' + h.rec.name + '</div></td><td align="right"><div class="holding-value-' + cls_gain_loss + '">$' + $.number(current_gain_loss,2) + '</div></td></tr>' +
 			         '</table></div>'
 			);
