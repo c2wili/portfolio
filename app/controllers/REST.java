@@ -1481,7 +1481,7 @@ public class REST extends Controller {
 			rs.close();
 			ps.close();
 			
-			sql = "SELECT A.*, 0.00000 as shares_sold, 0.00000 as gain_loss FROM portfolio.trades A order by activity_date";			
+			sql = "SELECT A.*, 0.00000 as shares_sold, 0.00000 as gain_loss FROM portfolio.trades A order by activity_date, id";			
 			Logger.info(sql);
 			System.out.println("1");
 			
