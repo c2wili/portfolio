@@ -74,13 +74,12 @@ public class Holding {
 						// if not all shares from this purchase are sold yet
 						if(sharesStillOwned > 0){							
 
-							if(this.ticker.equals("VWENX")){
-								//System.out.println("***** sharesSold remaining: " + sharesSold);
-								//System.out.println("***** sharesStillOwned remaining: " + sharesStillOwned);
-								//System.out.println("***** buy record: " + o2);								
-								//System.out.println("**");
+							if(this.ticker.equals("VWNAX")){
+								System.out.println("***** shares Still Owned: " + sharesStillOwned);
+								System.out.println("***** shares Sold : " + sharesSold);								
+								System.out.println("*****" + (sharesSold >= sharesStillOwned));
 							}
-							
+
 							// sale covers this entire buy
 							if(sharesSold >= sharesStillOwned){
 								
@@ -108,6 +107,11 @@ public class Holding {
 						        this.gain_loss+= gainloss;
 								sharesSold = 0;
 							}
+							if(this.ticker.equals("VWNAX")){
+								System.out.println("***** buy/drip record: " + o2);
+								System.out.println("*****");
+							}
+							
 						}
 						else{
 							//move on to the next buy record
@@ -127,6 +131,7 @@ public class Holding {
 			else if(o.get("activity_type").getAsString().equals("dividend") || o.get("activity_type").getAsString().equals("lt gain") || o.get("activity_type").getAsString().equals("st gain")){
 				
 				// add to div gains
+				o.addProperty("gain_loss", o.get("shares").getAsDouble() * o.get("price").getAsDouble());
 				this.div_gain+= o.get("shares").getAsDouble() * o.get("price").getAsDouble();		
 				this.gain_loss+= o.get("shares").getAsDouble() * o.get("price").getAsDouble();	
 			}

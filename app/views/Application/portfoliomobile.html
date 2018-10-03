@@ -5,12 +5,10 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	#{stylesheet 'jquery.mobile-1.4.5.min.css' /}
 	#{stylesheet 'font-awesome-4.6.3/css/font-awesome.css' /}
-	#{stylesheet 'jquery.dataTables.css' /}
 	
 	#{script 'jquery-1.12.4.min.js' /}
 	#{script 'jquery.mobile-1.4.5.min.js' /}
 	#{script 'jquery.number.min.js' /}
-	#{script 'DataTables-1.10.12/media/js/jquery.dataTables.min.js' /}
 		
 	#{script 'moment-2.15.1.min.js' /}
 	
@@ -30,11 +28,14 @@
 .grp-hdr{font-size:17px; font-weight:bold; vertical-align:bottom;}
 .grp-subhdr{font-size:12px; width:155px; white-space:nowrap; text-overflow:ellipsis; overflow:hidden;}
 .grp-val{color:#0000ff; font-size:15px;}
-
+.histyear{color: blue; cursor:pointer; font-size:.8em;}
 table td{
 font-family:sans-serif;
 font-size:12px;
 }
+#history-table th{font-size:.9em;}
+#history-table td{font-size:.8em;}
+#history-table tr:nth-child(even) { background-color: #f2f2f2; }
 .holding-value-loss{
 font-family:sans-serif;
 font-size:12px;
@@ -278,9 +279,28 @@ $( document ).ready(function() {
 	
 }); //end on ready
 
-function loadHistory( ticker ){
+function filterhistory(year){
+
+	if(year == 0){
+		$('#history-table').DataTable()
+		  .columns( 3 )
+	      .search( '-' )
+	      .draw();
+	}
+	else{    	
+    	$('#history-table').DataTable()
+    	    .columns( 3 )
+    	    .search( year )
+    	    .draw();
+	}
+
+}
+
+function loadHistory( ticker, _year ){
 	console.log( ticker )
 
+	if(_year == null) _year = yr;
+	
 	var p = portfolios[1];	
 	var holding = p.getHolding(ticker);
 	if(holding == null){
@@ -289,17 +309,63 @@ function loadHistory( ticker ){
 	}
 	
 	console.log(holding);
+	/*
     if($.fn.dataTable.isDataTable("#history-table")){
    	 var tbl = $('#history-table').DataTable();
    	 $('#history-table').empty();
    	 tbl.destroy();
     }
+    */
+    $('#history-table').empty();
+    var hdr = "<tr><th style='width:75px;'>Date</th><th style='width:70px;'>Type</th><th style='width:65px;'>Shares</th><th style='width:65px;'>Price</th><th style='width:65px;'>Shares<br/>Sold</th><th style='width:75px;'>+/-</th><th></th></tr>";
+    $('#history-table').append(hdr);
+	 
+    /*
+    var years= "";
+    $.each( historytable.rows().data(), function( key, o ) {
+        if(o.activity_date.substring(0,4) != years ){						        	
+        	if(years != "") yearLinks += " | <span class='histyear' onclick='filterhistory(" + years + ");'>" + years + "</span>"
+        	years = o.activity_date.substring(0,4);
+        }
+    });
+    yearLinks += " | <span class='histyear' onclick='filterhistory(" + years + ");'>" + years + "</span>"
     
-	var content = [];
+    $('#holding-history-title').html("Transaction history for " + data.name + " (" + data.ticker + ")<br/>" + yearLinks);
+    */
+    var years = [];
+    var yearLinks = [];
 	$.each( holding.rec.history, function( index, histrec ) {	
-		console.log(histrec);
-		content.push(histrec);
+		//console.log(histrec);
+		var histyear = histrec.activity_date.substring(0,4);
+		if($.inArray(histyear, years) == -1){
+			years.push(histyear)
+			yearLinks.push("<span class='histyear' onclick='loadHistory(\"" + ticker + "\"," + histyear + ");'>" + histyear + "</span>")
+		}
+		
+		if(histyear != _year) {			
+			return true;
+		}
+		
+		var sold = ( (histrec.activity_type == "buy" || histrec.activity_type == "drip") && histrec.shares_sold > 0 ) ? $.number(histrec.shares_sold,4) : "--";
+		var gain_loss = ( (histrec.activity_type == "buy" || histrec.activity_type == "drip") && histrec.shares_sold > 0 ) ? + histrec.gain_loss : "--";
+		var price = (histrec.activity_type == "dividend") ? $.number(histrec.price,5) : $.number(histrec.price,2);
+		if(histrec.activity_type == "dividend" || histrec.activity_type == "st gain" || histrec.activity_type == "lt gain") gain_loss = histrec.gain_loss;
+		if(gain_loss < 0) gain_loss ="<span style='color:red;'>($" + $.number(gain_loss*-1,2) + ")</span>";
+		else if(gain_loss >= 0) gain_loss ="<span style='color:green;'>$" + $.number(gain_loss,2) + "</span>";
+		//content.push(histrec);
+		
+		var del = (histrec.activity_type == "drip") ? "" : "<i class='fa fa-trash-o fa-lg ico-trash' aria-hidden='true'></i>"; 
+		
+		$('#history-table tr:last').after("<tr><td>" + histrec.activity_date + "</td>" +
+				                               "<td>" + histrec.activity_type + "</td>" +
+				                               "<td align='right'>" + $.number(histrec.shares,4) + "</td>" +
+				                               "<td align='right'>$" + price + "</td>" +
+				                               "<td align='right'>" + sold + "</td>" +
+				                               "<td align='right'>" + gain_loss + "</td>" +
+				                               "<td align='center'>" + del + "</td></tr>");
 	});
+	
+	/*
 	
 	var historytable = $('#history-table').DataTable( {
 	        data: content
@@ -325,7 +391,7 @@ function loadHistory( ticker ){
 	     	,initComplete: function(settings,json){
 	     		
 			    // update modal title
-			    /*
+			    
 			    var yearLinks = "<span class='histyear' onclick='filterhistory(0);'>All</span>"
 			    						  
 			    var years= "";
@@ -339,27 +405,29 @@ function loadHistory( ticker ){
 			    
 			    $('#holding-history-title').html("Transaction history for " + data.name + " (" + data.ticker + ")<br/>" + yearLinks);
 	     		
-	     		/*
-			 	var filteredData = historytable
-		 	    .column( 2 )
-		 	    .data()
-		 	    .filter( function ( value, index ) {
-		 	    	console.log(value.substring(0,4) == yr)
-		 	        //return (value.substring(0,4) == yr) ? true : false;
-		 	    	return false;
-		 	    } );
-	     		*/
+	     		
+			 	//var filteredData = historytable
+		 	    //.column( 2 )
+		 	    //.data()
+		 	    //.filter( function ( value, index ) {
+		 	    //	console.log(value.substring(0,4) == yr)
+		 	    //    //return (value.substring(0,4) == yr) ? true : false;
+		 	    //	return false;
+		 	    //} );
+	     		 
 	     	}
     });	
 	
+	 */
+
+	
+	$("#modal-history-years").empty().html( yearLinks.join(" | " ));
 	 
-	
-	$("#modal-history-title").html( "<h1>" + ticker + "</h1>")
-	
 	$.mobile.changePage("#modal-history", {
        role: "dialog"  // show #page2 as dialog
        ,transition: "slidedown"
     })
+    $("#modal-history-title .ui-title").html( ticker )
 }
 
 
@@ -658,24 +726,10 @@ function loadPortfolio( id ){
 
 <!--  history modal -->
     <div id="modal-history" data-role="dialog" data-transition="flip">
-        <div data-role="header" id="modal-history-title">	
-        </div>        
-        <div data-role="content" id="modal-history-content">
-          <table id="history-table" class="display" style="width:100%">
-	        <thead>
-	            <tr>
-	                <th>id</th>
-	                <th>holding id</th>
-	                <th>brokerage id</th>
-	                <th>date</th>
-	                <th>type</th>
-	                <th>shares</th>
-	                <th>price</th>
-	                <th>shares<br/>sold</th>
-	                <th>+/-</th>
-	                <th></th>
-	            </tr>
-	        </thead>
+        <div data-role="header" id="modal-history-title"><h1>tmp</h1></div>
+        <div data-role="content" id="modal-history-years" style="padding:.5em .5em 0 .5em !important;"></div>        
+        <div data-role="content" id="modal-history-content" style="padding:0 .5em 0 .5em !important;">
+          <table id="history-table" class="display" style="width:100%" cellpadding="4">
 	      </table>   
         </div>
         <a href="index.html" data-rel="back" class="ui-btn ui-shadow ui-corner-all ui-btn-a">Close</a>
